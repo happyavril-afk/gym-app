@@ -11,7 +11,7 @@ if 'logged_in' not in st.session_state:
     st.session_state['role'] = None
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (폰트, 배경, 표/그래프 강제 적용)
+# 🎨 다이내믹 커스텀 CSS (폰트, 배경, 가독성 개선)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -41,11 +41,10 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
-        # 🔥 로그인 (첫 페이지): 30대 남녀 에너제틱 짐(Gym) 배경 & 텍스트 대폭 확대
+        # 🔥 로그인 (첫 페이지): 30대 남녀 에너제틱 짐(Gym) 배경
         st.markdown("""
         <style>
         .stApp {
-            /* 30대 남녀가 짐에서 함께 역동적으로 운동하는 고해상도 이미지 */
             background-image: linear-gradient(rgba(10, 10, 12, 0.65), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
@@ -79,7 +78,6 @@ def inject_custom_css():
             padding: 40px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
-        /* 버튼 텍스트 및 패딩 대폭 확대 */
         .stButton>button {
             border-radius: 30px !important;
             font-size: 1.6rem !important; 
@@ -100,27 +98,31 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
-        # 👟 회원 화면: 다크 & 인스타그램 감성 (글래스모피즘)
+        # 👟 회원 화면: 다크 & 인스타그램 감성 (가독성/대비 대폭 개선)
         st.markdown("""
         <style>
         .stApp {
-            background-color: #1a1a24;
+            /* 딥 슬레이트(네이비) 그라데이션으로 흰색 글씨 대비 강화 */
+            background-color: #0f172a; 
             background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,15%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(225,39%,10%,1) 0, transparent 50%);
+                radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), 
+                radial-gradient(at 100% 0%, #312e81 0, transparent 50%);
+            background-attachment: fixed;
         }
         .insta-card {
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.12); /* 투명도를 살짝 낮춰 배경과 분리 */
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-radius: 24px;
             padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.25); /* 테두리를 밝게 */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
             margin-bottom: 25px;
-            color: #ffffff;
         }
-        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b { color: #ffffff !important; }
+        /* 💡 카드 내부 모든 텍스트를 가장 밝은 흰색(#ffffff)으로 강제 적용 */
+        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b, .insta-card div, .insta-card span, .stMarkdown p { 
+            color: #ffffff !important; 
+        }
         .insta-gradient-text {
             font-family: 'Montserrat', sans-serif !important;
             background: linear-gradient(to right, #00f2fe, #4facfe);
@@ -139,9 +141,32 @@ def inject_custom_css():
             color: #111 !important;
             border: none !important;
         }
-        .stTabs [data-baseweb="tab"] { color: #aaa !important; font-weight: 700; }
-        .stTabs [aria-selected="true"] { color: #fff !important; }
-        .stSelectbox label, .stCheckbox label { color: white !important; }
+        
+        /* 🔥 탭(Tab) 메뉴 가시성 극대화 */
+        .stTabs [data-baseweb="tab-list"] {
+            background-color: rgba(255, 255, 255, 0.05); /* 탭 컨테이너 배경 */
+            border-radius: 12px;
+            padding: 5px;
+            gap: 8px;
+        }
+        .stTabs [data-baseweb="tab"] { 
+            color: #e2e8f0 !important; /* 선택 안된 탭도 아주 밝은 회색/흰색으로 */
+            font-weight: 700; 
+            font-size: 1.15rem !important; /* 탭 글자 크기 확대 */
+            padding: 10px 15px;
+        }
+        .stTabs [aria-selected="true"] { 
+            color: #ccff00 !important; /* 선택된 탭은 강렬한 네온 옐로우그린 */
+            background-color: rgba(255,255,255,0.1) !important; /* 선택된 탭 배경 하이라이트 */
+            border-radius: 8px;
+        }
+        
+        /* 셀렉트박스 & 체크박스 텍스트 가독성 */
+        .stSelectbox label, .stCheckbox label, .stNumberInput label { 
+            color: #ffffff !important; 
+            font-size: 1.1rem !important;
+            font-weight: 700 !important;
+        }
         </style>
         """, unsafe_allow_html=True)
         
@@ -257,7 +282,7 @@ def member_app():
             st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 💻 점주/트레이너 (B2B) 대시보드 (FRD 100% 반영 및 풍부한 데모 데이터)
+# 💻 점주/트레이너 (B2B) 대시보드
 # ==========================================
 def owner_app():
     is_owner = (st.session_state['role'] == 'OWNER')
@@ -276,12 +301,10 @@ def owner_app():
         menu = st.sidebar.radio("📋 대시보드 메뉴", ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"])
         st.sidebar.info("💡 Admin(점주) 권한 메뉴는 숨김 처리되었습니다.")
 
-    # [FRD 반영] Epic 1: 이탈 위험 신호 자동 감지 및 컨택
     if menu == "🚨 Epic 1. 이탈 위험 관리":
         st.markdown("<h2>🚨 1-1. 이탈 위험 신호 자동 감지 보드</h2>", unsafe_allow_html=True)
         st.markdown("<div class='corp-card'>14일 미방문(조건 A) 또는 방문 빈도가 50% 이상 급감(조건 B)한 회원 리스트입니다.<br>🚨 메인 대시보드 배지 알림: <b>오늘 관리가 필요한 이탈 위험 회원 (6명)</b></div>", unsafe_allow_html=True)
         
-        # 확장된 데모 데이터
         churn_df = pd.DataFrame({
             "회원명": ["김철수", "박지민", "이동국", "한소희", "마동석", "이지은"],
             "위험 사유": [
@@ -301,12 +324,10 @@ def owner_app():
         if st.button("위험군 회원 전체 '복귀유도 맞춤 루틴 템플릿' 카카오 알림톡 전송"):
             st.toast("6명의 회원에게 메시지가 성공적으로 발송되었습니다.")
 
-    # [FRD 반영] Epic 2: PT 타겟팅 (정체기) 및 목표 달성률
     elif menu == "🎯 Epic 2. PT 타겟팅 & 성장":
         st.markdown("<h2>🎯 2-1. 정체기 회원 타겟팅 (PT 영업 보드)</h2>", unsafe_allow_html=True)
         st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다. 원포인트 레슨 제안에 최적화되어 있습니다.</div>", unsafe_allow_html=True)
         
-        # 확장된 데모 데이터
         sales_df = pd.DataFrame({
             "회원명": ["최운식", "정종현", "유재석", "김종국", "송지효", "하동훈"],
             "정체 종목": ["벤치프레스 (가슴)", "스쿼트 (하체)", "데드리프트 (등)", "숄더 프레스 (어깨)", "레그 프레스 (하체)", "랫풀다운 (등)"],
@@ -322,7 +343,6 @@ def owner_app():
         if st.button("💪 정체기 회원 '원포인트 PT 제안' 푸시 일괄 발송"):
             st.toast("타겟팅된 회원들에게 영업 제안이 전송되었습니다.")
 
-    # [FRD 반영] Epic 3: 자동 축하 메시지 및 트레이너 응답 KPI
     elif menu == "💬 Epic 3. 트레이너 KPI & 소통":
         st.markdown("<h2>💬 트레이너 소통 및 응답 대시보드</h2>", unsafe_allow_html=True)
         
@@ -333,7 +353,6 @@ def owner_app():
             st.markdown("<div class='corp-card'><b>📊 3-2. 트레이너 응답 성과 지표 (KPI)</b><br>평균 질문 응답률: 92%<br>평균 응답 속도: 45분 (목표 KPI: 60분 이내 달성)</div>", unsafe_allow_html=True)
             
         st.subheader("미해결 회원 질문함")
-        # 확장된 데모 데이터
         qna_df = pd.DataFrame({
             "회원명": ["박수민", "김민지", "이광수", "전소민", "지석진"],
             "질문 내용": [
@@ -348,12 +367,10 @@ def owner_app():
         })
         st.dataframe(qna_df, hide_index=True, use_container_width=True)
 
-    # [FRD 반영] Epic 4: 히트맵 분석 및 오프피크 마케팅
     elif menu == "🏢 Epic 4. 시설 및 오프피크":
         st.markdown("<h2>🏢 기구 혼잡도 히트맵 및 공간 최적화</h2>", unsafe_allow_html=True)
         st.markdown("<div class='corp-card'>4-1. NFC 태그 타임스탬프 기반 기구별 점유율(병목 시간대)을 분석합니다.</div>", unsafe_allow_html=True)
         
-        # 확장된 데모 데이터 (더 많은 기구와 디테일한 수치)
         heatmap_data = pd.DataFrame({
             "파워 랙 (스쿼트)": [15, 30, 45, 80, 100, 95, 60],
             "트레드밀 (유산소)": [40, 50, 70, 95, 90, 80, 60],
@@ -368,12 +385,10 @@ def owner_app():
         if st.button("낮 시간대(12시~15시) 방문 이력 회원군 '오프피크 전용 쿠폰' 일괄 발송"):
             st.toast("한산한 시간대 방문을 유도하는 쿠폰이 발송되었습니다.")
 
-    # [FRD 반영] 시스템 필수 요구사항: 개인정보 동의 관리 (Privacy Compliance)
     elif menu == "🔒 개인정보 및 권한 설정":
         st.markdown("<h2>🔒 Privacy Compliance 및 동의 관리</h2>", unsafe_allow_html=True)
         st.markdown("<div class='corp-card'>회원의 개인정보 제공 동의 철회 시 시스템 상에서 민감 정보(체성분 등)가 즉각 마스킹(블라인드) 처리되어 법적 리스크를 차단합니다.</div>", unsafe_allow_html=True)
         
-        # 확장된 데모 데이터
         privacy_df = pd.DataFrame({
             "회원명": ["김철수", "박지민 (철회)", "이지은", "마동석", "한소희 (만료)"],
             "맞춤형 코칭 데이터 활용 동의": ["동의함", "동의 철회 🚫", "동의함", "동의함", "기간 만료 🚫"],
@@ -388,7 +403,6 @@ def owner_app():
         })
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
-    # 트레이너(Sub-admin) 전용 화면
     elif menu in ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"]:
         st.markdown("<h2>트레이너 제한적 접근 화면</h2>", unsafe_allow_html=True)
         st.info("RBAC 보안 정책에 따라 관리자 대시보드(매출, 전체 회원 통계)는 차단되었습니다.")
