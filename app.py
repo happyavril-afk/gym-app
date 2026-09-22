@@ -11,10 +11,10 @@ if 'logged_in' not in st.session_state:
     st.session_state['role'] = None
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (강렬한 폰트 및 권한별 디자인)
+# 🎨 다이내믹 커스텀 CSS (폰트, 버튼 크기, 캔버스 폰트 강제 적용)
 # ==========================================
 def inject_custom_css():
-    # 🌟 개성있고 스포티한 폰트 (Gmarket Sans + Montserrat) 적용
+    # 🌟 Gmarket Sans & Montserrat 폰트 적용 (그래프, 표 텍스트까지 강제)
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
@@ -30,7 +30,9 @@ def inject_custom_css():
         font-weight: 700;
         font-style: normal;
     }
-    html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6 {
+    /* 기본 텍스트 및 표/그래프 내부 요소 폰트 강제 적용 */
+    html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, 
+    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td, text {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
     }
@@ -38,18 +40,19 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
-        # 🔥 로그인 (첫 페이지): 강렬한 짐(Gym) 풀스크린 배경 & 네온 포인트
+        # 🔥 로그인 (첫 페이지): 30대 남녀 에너제틱 배경 & 버튼 크기 확대
         st.markdown("""
         <style>
         .stApp {
-            background-image: linear-gradient(rgba(10, 10, 12, 0.7), rgba(10, 10, 12, 0.9)), url('https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=2070&auto=format&fit=crop');
+            /* 30대 남녀가 함께 운동하는 역동적인 이미지로 교체 */
+            background-image: linear-gradient(rgba(10, 10, 12, 0.6), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
         }
         .hero-title {
             font-family: 'Montserrat', 'GmarketSans', sans-serif !important;
-            font-size: 4.5rem;
+            font-size: 5rem;
             font-weight: 900;
             color: #ffffff;
             text-transform: uppercase;
@@ -59,7 +62,7 @@ def inject_custom_css():
             text-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
         .hero-subtitle {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
             color: #ccff00; /* 네온 옐로우그린 */
             text-align: center;
             font-weight: 700;
@@ -75,11 +78,12 @@ def inject_custom_css():
             padding: 40px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
-        /* 로그인 버튼 네온 스타일링 */
+        /* 로그인 버튼 텍스트 대폭 확대 및 네온 스타일링 */
         .stButton>button {
             border-radius: 30px !important;
-            font-size: 1.1rem !important;
-            padding: 1.5rem 0 !important;
+            font-size: 1.5rem !important; /* 글자 크기 확대 (기존 1.1rem -> 1.5rem) */
+            font-weight: 900 !important;
+            padding: 2rem 0 !important; /* 상하 여백 확대하여 버튼 자체를 키움 */
             background: transparent !important;
             border: 2px solid #ccff00 !important;
             color: #ccff00 !important;
@@ -88,14 +92,14 @@ def inject_custom_css():
         .stButton>button:hover {
             background: #ccff00 !important;
             color: #111 !important;
-            box-shadow: 0 0 20px rgba(204,255,0,0.4) !important;
-            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(204,255,0,0.5) !important;
+            transform: scale(1.03);
         }
         </style>
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
-        # 👟 회원 화면: 다크 & 글래스모피즘 (인스타그램/스포티 감성)
+        # 👟 회원 화면: 다크 & 글래스모피즘
         st.markdown("""
         <style>
         .stApp {
@@ -115,9 +119,7 @@ def inject_custom_css():
             margin-bottom: 25px;
             color: #ffffff;
         }
-        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b {
-            color: #ffffff !important;
-        }
+        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b { color: #ffffff !important; }
         .insta-gradient-text {
             font-family: 'Montserrat', sans-serif !important;
             background: linear-gradient(to right, #00f2fe, #4facfe);
@@ -143,7 +145,7 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
         
     elif st.session_state['role'] in ['OWNER', 'TRAINER']:
-        # 💼 점주/트레이너 화면: 시크한 화이트 & 블랙 + 블루 포인트
+        # 💼 점주/트레이너 화면: 시크한 화이트 & 블랙
         st.markdown("""
         <style>
         .stApp { background-color: #F8F9FA; }
@@ -239,8 +241,10 @@ def member_app():
             st.markdown("**📊 총 운동 볼륨(kg) 성장 추이**")
             chart_data = history_data.set_index("날짜")[["총 볼륨"]]
             st.line_chart(chart_data)
+            
             st.markdown("**📋 상세 기록 로그**")
-            st.dataframe(history_data, hide_index=True, use_container_width=True)
+            # 폰트 강제 적용을 위해 st.table 활용
+            st.table(history_data)
             st.markdown("</div>", unsafe_allow_html=True)
 
         with tab4:
@@ -326,21 +330,21 @@ def main():
         with col:
             st.markdown("<div class='login-card'>", unsafe_allow_html=True)
             
-            if st.button("👟 회원 (B2C)으로 접속", use_container_width=True):
+            if st.button("👟 회원 (B2C) 접속", use_container_width=True):
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = 'MEMBER'
                 st.rerun()
                 
             st.markdown("<br>", unsafe_allow_html=True)
                 
-            if st.button("💼 총괄 점주 (Admin)로 접속", use_container_width=True):
+            if st.button("💼 총괄 점주 (Admin) 접속", use_container_width=True):
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = 'OWNER'
                 st.rerun()
                 
             st.markdown("<br>", unsafe_allow_html=True)
                 
-            if st.button("💪 일반 트레이너 (Sub-admin)", use_container_width=True):
+            if st.button("💪 일반 트레이너 접속", use_container_width=True):
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = 'TRAINER'
                 st.rerun()
