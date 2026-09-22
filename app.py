@@ -1,168 +1,257 @@
 import streamlit as st
 import pandas as pd
-import datetime
+import numpy as np
 
-# 1. 페이지 및 상태 초기화
-st.set_page_config(page_title="스마트 헬스장 (B2B2C)", page_icon="⚡", layout="wide")
+# 1. 페이지 설정 (반드시 최상단에 위치)
+st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
+# 2. 세션 상태 초기화
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
-if 'member_points' not in st.session_state:
-    st.session_state['member_points'] = 1500
 
-# 2. 로그인 화면 (B2B2C 권한 분기)
-def login_screen():
-    st.title("⚡ FitPass Open - 스마트 헬스장 B2B2C 플랫폼")
-    st.markdown("하나의 플랫폼에서 회원(B2C)과 점주(B2B)가 어떻게 상호작용하는지 확인하세요.")
-    
-    st.divider()
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("📱 회원 (Member) 모드")
-        st.write("스마트워치 데이터와 NFC 태깅을 통해 PT처럼 관리받는 경험을 제공합니다.")
-        if st.button("회원 앱으로 접속하기", use_container_width=True):
-            st.session_state['logged_in'] = True
-            st.session_state['role'] = 'MEMBER'
-            st.rerun()
-            
-    with col2:
-        st.subheader("💻 점주 (Owner) 모드")
-        st.write("회원의 행동 데이터를 분석하여 이탈을 방지하고 PT 매출을 극대화합니다.")
-        if st.button("점주 대시보드로 접속하기", type="primary", use_container_width=True):
-            st.session_state['logged_in'] = True
-            st.session_state['role'] = 'OWNER'
-            st.rerun()
+# ==========================================
+# 🎨 동적 CSS 인젝션 (권한별 디자인 완전 분리)
+# ==========================================
+def inject_custom_css():
+    if st.session_state['role'] == 'MEMBER':
+        # 회원용: 인스타그램 감성, 트렌디, 다크/그라데이션 톤, 둥근 모서리
+        st.markdown("""
+        <style>
+        .stApp { background-color: #FAFAFA; }
+        .insta-card {
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            border: 1px solid #eaeaea;
+        }
+        .insta-gradient-text {
+            background: -webkit-linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+        .stButton>button { border-radius: 30px; font-weight: bold; }
+        </style>
+        """, unsafe_allow_html=True)
+    elif st.session_state['role'] in ['OWNER', 'TRAINER']:
+        # 점주/트레이너용: 깔끔한 엔터프라이즈 대시보드, 직선적, 모노톤+포인트컬러
+        st.markdown("""
+        <style>
+        .stApp { background-color: #F4F6F9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .corp-card {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid #2C3E50;
+            margin-bottom: 15px;
+        }
+        .metric-container { background-color: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; }
+        h1, h2, h3 { color: #2C3E50; font-weight: 700; }
+        </style>
+        """, unsafe_allow_html=True)
 
-# 3. 회원(Member) 사이드 UX
+# ==========================================
+# 📱 회원 (MEMBER) 앱 화면 - 인스타그램 감성
+# ==========================================
 def member_app():
-    # 모바일 앱 느낌을 주기 위해 중앙 컬럼만 사용
     _, col_main, _ = st.columns([1, 2, 1])
-    
     with col_main:
-        st.title("👋 안녕하세요, 박수민 회원님!")
-        st.write(f"보유 포인트: **{st.session_state['member_points']} P**")
+        st.markdown("<h2 class='insta-gradient-text'>✨ Today's Fit</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='insta-card'><b>@soomin_workout</b>님, 오늘 하루도 득근하세요! 🔥<br>보유 포인트: 1,500 P</div>", unsafe_allow_html=True)
         
-        # 탭 구성: 오늘 운동 / NFC 연동 / 내 성과
-        tab1, tab2, tab3 = st.tabs(["🎯 오늘의 추천", "📡 기구 태그(NFC)", "🏆 내 성과 및 랭킹"])
+        tab1, tab2, tab3 = st.tabs(["🚀 운동하기", "📸 오운완", "💬 질문하기"])
         
         with tab1:
-            st.subheader("AI 맞춤 운동 처방")
-            st.info("💡 어제는 하체 운동(볼륨 3,200kg)을 강도 높게 수행하셨네요. 오늘은 상체 회복 루틴을 추천합니다!")
+            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
+            st.subheader("📡 NFC 기구 스캔 (원터치 갱신)")
+            st.write("기구에 스마트폰을 태그하여 운동을 기록하세요.")
             
-            # 루틴 체크리스트 시뮬레이션
-            st.checkbox("워밍업: 러닝머신 15분 (심박수 120 유지)")
-            st.checkbox("메인 1: 체스트 프레스 30kg x 12회 (3세트)")
-            st.checkbox("메인 2: 랫풀다운 25kg x 15회 (3세트)")
-            
-            if st.button("💪 운동 시작하기", use_container_width=True):
-                st.toast("웨어러블 심박수 연동이 시작되었습니다!")
+            machine = st.selectbox("가상 NFC 태그:", ["기구를 선택하세요", "벤치프레스 머신 (가슴)"])
+            if machine == "벤치프레스 머신 (가슴)":
+                # 마찰 관리(Friction Management) 요구사항 반영: 이전 데이터 디폴트 로드
+                st.success("✅ 벤치프레스 인식 완료")
+                st.info("💡 저번 주에 40kg으로 10회 수행하셨네요! 오늘도 동일하게 세팅해 드릴까요?")
                 
+                weight = st.number_input("중량 (kg)", value=40, step=5)
+                reps = st.number_input("반복 횟수", value=10, step=1)
+                
+                if st.button("💪 이 기록으로 원터치 세트 완료", use_container_width=True):
+                    st.toast("훌륭합니다! 1세트가 기록되었습니다. 🔥")
+            st.markdown("</div>", unsafe_allow_html=True)
+
         with tab2:
-            st.subheader("기구 스캔 및 가이드")
-            st.markdown("기구에 부착된 NFC 스티커에 스마트폰을 태그하세요.")
+            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
+            st.subheader("📸 나의 오운완 스토리")
+            st.image("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", caption="#오운완 #스마트헬스장 #하체데이")
+            st.write("오늘 소모 칼로리: **450 kcal** | 누적 볼륨: **3,200 kg**")
+            st.button("인스타그램으로 바로 공유하기", use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
             
-            machine = st.selectbox("가상 NFC 스캔 시뮬레이션:", ["선택하세요", "체스트 프레스 머신", "파워 랙 (스쿼트)"])
-            
-            if machine == "체스트 프레스 머신":
-                st.success("✅ 체스트 프레스 머신 인식 완료")
-                st.video("https://www.youtube.com/watch?v=Gji3G-e66-w") # 임시 유튜브 링크
-                st.metric(label="회원님 체형(175cm) 맞춤 의자 세팅", value="3칸 높이기")
-                st.metric(label="오늘의 추천 중량", value="30 kg")
-                
-                if st.button("세트 완료 및 기록 저장"):
-                    st.toast("성공적으로 기록되었습니다! 휴식 시간(60초)을 셉니다.")
-                    st.session_state['member_points'] += 50
-                    
-            elif machine == "파워 랙 (스쿼트)":
-                st.error("🚨 현재 해당 기구는 다른 회원이 사용 중입니다. (혼잡도 높음)")
-                st.warning("대체 기구 안내: 빈 기구인 '레그 프레스 머신'으로 하체 운동을 대체하시겠습니까?")
-                if st.button("대체 기구 위치 확인하기"):
-                    st.toast("지도에 레그 프레스 머신 위치가 표시됩니다.")
-
         with tab3:
-            st.subheader("이번 주 성과 및 랭킹")
-            col_a, col_b = st.columns(2)
-            col_a.metric("주간 누적 볼륨", "8,500 kg", "15% 🔺")
-            col_b.metric("소모 칼로리", "1,240 kcal", "2% 🔻")
-            
-            st.divider()
-            st.markdown("#### 🥇 우리 동네 헬스장 익명 리더보드")
-            leaderboard = pd.DataFrame({
-                "순위": ["1위", "2위", "3위 (Me)"],
-                "닉네임": ["근육짱짱맨", "운동하는직장인", "박수민 (본인)"],
-                "이번주 출석": ["5일", "4일", "3일"]
-            })
-            st.dataframe(leaderboard, hide_index=True, use_container_width=True)
-            
-            if st.button("📸 인스타 스토리용 오운완 카드 생성", use_container_width=True):
-                st.success("운동 볼륨과 칼로리가 예쁘게 디자인된 이미지가 갤러리에 저장되었습니다!")
+            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
+            st.subheader("🙋‍♂️ 담당 트레이너에게 질문하기")
+            st.text_area("운동 중 막히는 부분이 있나요?", placeholder="예: 벤치프레스 할 때 오른쪽 어깨가 살짝 결려요. 자세 문제일까요?")
+            if st.button("질문 전송"):
+                st.toast("트레이너에게 질문이 전달되었습니다. (평균 응답시간: 1시간 이내)")
+            st.markdown("</div>", unsafe_allow_html=True)
 
-# 4. 점주(Owner) 사이드 UX
+# ==========================================
+# 💻 점주/트레이너 (B2B) 대시보드 - 엔터프라이즈 감성
+# ==========================================
 def owner_app():
-    st.sidebar.title("🏢 점주 관리자 패널")
-    menu = st.sidebar.radio("메뉴 이동", ["📊 전체 운영 통계", "🎯 PT 영업 타겟팅 보드", "⚙️ 기구 병목 및 챌린지"])
+    is_owner = (st.session_state['role'] == 'OWNER')
+    role_name = "총괄 점주(관장)" if is_owner else "트레이너(Sub-admin)"
     
-    if menu == "📊 전체 운영 통계":
-        st.title("지점 운영 통합 대시보드")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("활성 회원 수", "412명", "12명 신규 🔺")
-        col2.metric("이달의 예상 이탈률", "4.2%", "0.8% 🔻")
-        col3.metric("최근 7일 출석률", "68%", "5% 🔺")
+    st.sidebar.markdown(f"**접속 계정:** {role_name}")
+    
+    # RBAC 권한에 따른 메뉴 분리
+    if is_owner:
+        menu = st.sidebar.radio("📋 대시보드 메뉴", [
+            "🚨 Epic 1. 이탈 위험 관리", 
+            "🎯 Epic 2. PT 타겟팅 & 성장", 
+            "💬 Epic 3. 트레이너 KPI & 소통", 
+            "🏢 Epic 4. 시설 및 오프피크",
+            "🔒 개인정보 및 권한 설정"
+        ])
+    else:
+        menu = st.sidebar.radio("📋 대시보드 메뉴", ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"])
+        st.sidebar.info("💡 Admin(점주) 권한 메뉴는 숨김 처리되었습니다.")
+
+    if menu == "🚨 Epic 1. 이탈 위험 관리":
+        st.markdown("<h2>🚨 이탈 위험 신호 자동 감지 보드</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>마지막 방문일로부터 14일 경과 또는 방문 빈도가 50% 이상 급감한 회원을 시스템이 자동 필터링합니다.</div>", unsafe_allow_html=True)
         
-        st.subheader("주간 요일별 출석 트렌드 (웨어러블/NFC 데이터 기반)")
-        chart_data = pd.DataFrame({'출석 인원': [120, 150, 180, 140, 110, 90, 85]}, 
-                                  index=['월', '화', '수', '목', '금', '토', '일'])
-        st.bar_chart(chart_data)
-        
-    elif menu == "🎯 PT 영업 타겟팅 보드":
-        st.title("🚨 정체기 및 이탈 위험 회원 리스트")
-        st.markdown("회원의 성장 정체기와 방문율 하락 데이터를 AI가 분석하여 조기 개입 타이밍을 제안합니다.")
-        
-        risk_data = pd.DataFrame({
-            "회원명": ["김현철", "최운식", "정종현", "장은진"],
-            "상태 분류": ["🔴 이탈 위험 (3주 미방문)", "🟡 중량 정체기 (4주째 벤치프레스 동일)", "🟡 체성분 목표 미달", "🟢 양호"],
-            "AI 추천 개입 액션": ["복귀 유도 쿠폰 (알림톡 발송)", "원포인트 PT 레슨 무료 제안", "루틴 변경 상담 (전화)", "자동 축하 메시지 발송"]
+        churn_df = pd.DataFrame({
+            "회원명": ["김철수", "박지민", "이동국"],
+            "위험 사유": ["15일 장기 미방문", "주 4회 ➔ 주 1회 급감", "14일 장기 미방문"],
+            "이탈 확률": ["88%", "75%", "82%"],
+            "최근 연락": ["-", "7일 전", "-"]
         })
-        st.dataframe(risk_data, use_container_width=True, hide_index=True)
+        st.dataframe(churn_df, use_container_width=True, hide_index=True)
         
-        st.divider()
-        col_x, col_y = st.columns(2)
-        with col_x:
-            if st.button("🔴 이탈 위험군 전체 '복귀 유도 쿠폰' 자동 발송"):
-                st.toast("김현철 회원 외 4명에게 7일 연장 쿠폰 알림톡이 발송되었습니다!")
-        with col_y:
-            if st.button("🟡 정체기 회원 전체 '원포인트 PT' 영업 알림 발송"):
-                st.toast("최운식 회원 외 8명에게 무료 자세교정 쿠폰이 발송되었습니다!")
+        if st.button("✉️ 선택된 위험 회원에게 '맞춤형 복귀 유도 알림톡' 일괄 발송", type="primary"):
+            st.toast("3명의 회원에게 복귀 유도 메시지가 발송되었습니다.")
 
-    elif menu == "⚙️ 기구 병목 및 챌린지":
-        st.title("공간 최적화 및 커뮤니티 관리")
+    elif menu == "🎯 Epic 2. PT 타겟팅 & 성장":
+        st.markdown("<h2>🎯 정체기 회원 타겟팅 (PT 영업)</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>3주 이상 주력 기구의 중량 갱신(PR)이 없는 회원을 추출합니다. 원포인트 PT 제안에 최적화된 리스트입니다.</div>", unsafe_allow_html=True)
         
-        st.subheader("🔥 시간대별 기구 NFC 점유율 (히트맵 분석)")
-        st.write("저녁 7시~8시 파워 랙 점유율이 95%에 달하여 회원 불만이 예상됩니다. 오전 타임 마케팅을 전개하세요.")
+        sales_df = pd.DataFrame({
+            "회원명": ["최운식", "정종현", "유재석"],
+            "정체 종목": ["벤치프레스", "스쿼트", "데드리프트"],
+            "정체 기간": ["4주째 50kg", "3주째 80kg", "5주째 60kg"],
+            "운동계획 수행률(목표 달성)": [65, 40, 80] # 프로그레스 바 시각화를 위한 수치
+        })
         
-        if st.button("낮 시간대(12~16시) 방문 가능 회원 대상 타임 쿠폰 발송"):
-            st.toast("타겟팅된 회원 120명에게 발송 완료!")
+        st.dataframe(
+            sales_df,
+            column_config={
+                "운동계획 수행률(목표 달성)": st.column_config.ProgressColumn(
+                    "계획 수행률", min_value=0, max_value=100, format="%d%%"
+                ),
+            },
+            hide_index=True, use_container_width=True
+        )
+        
+        if st.button("💪 정체기 회원 '원포인트 PT 제안' 푸시 발송"):
+            st.toast("영업 타겟팅 푸시 알림이 전송되었습니다.")
+
+    elif menu == "💬 Epic 3. 트레이너 KPI & 소통":
+        st.markdown("<h2>💬 트레이너 소통 및 응답 대시보드</h2>", unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("<div class='corp-card'><b>🤖 시스템 자동 발송 현황 (관장 명의)</b><br>신규 회원 1주차 3회 출석 달성: 이번 주 12건 자동 발송<br>최초 10kg 증량 달성: 이번 주 5건 자동 발송</div>", unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("<div class='corp-card'><b>📊 트레이너 응답 성과 (KPI)</b><br>평균 응답률: 92%<br>평균 응답 속도: 45분 (목표 60분 이내)</div>", unsafe_allow_html=True)
             
-        st.divider()
-        st.subheader("🏆 헬스장 자체 커스텀 챌린지 생성")
-        ch_name = st.text_input("챌린지 이름", "10월 한 달 20일 출석왕 도전!")
-        ch_reward = st.text_input("목표 달성 보상", "개인 락커 1개월 무료 이용권")
-        if st.button("챌린지 회원 앱에 게시하기", type="primary"):
-            st.success(f"[{ch_name}] 챌린지가 모든 회원 앱 메인 화면에 노출되었습니다.")
+        st.subheader("미해결 회원 질문함")
+        qna_df = pd.DataFrame({
+            "회원명": ["박수민", "김민지"],
+            "질문 내용": ["벤치프레스 할 때 어깨가 아파요.", "인바디 쟀는데 체지방이 안 빠져요."],
+            "담당 트레이너": ["강태혁", "이국종"],
+            "대기 시간": ["45분", "2시간 10분 ⚠️"]
+        })
+        st.dataframe(qna_df, hide_index=True, use_container_width=True)
 
-# 5. 메인 컨트롤러
-if not st.session_state['logged_in']:
-    login_screen()
-else:
-    st.sidebar.markdown(f"**현재 모드:** `{'점주(B2B)' if st.session_state['role'] == 'OWNER' else '회원(B2C)'}`")
-    if st.sidebar.button("로그아웃 (권한 변경)"):
-        st.session_state['logged_in'] = False
-        st.session_state['role'] = None
-        st.rerun()
+    elif menu == "🏢 Epic 4. 시설 및 오프피크":
+        st.markdown("<h2>🏢 기구 혼잡도 히트맵 및 공간 최적화</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>NFC 태그 타임스탬프 기반으로 기구별 하루 점유율을 시각화합니다.</div>", unsafe_allow_html=True)
         
-    if st.session_state['role'] == 'MEMBER':
-        member_app()
-    elif st.session_state['role'] == 'OWNER':
-        owner_app()
+        # 히트맵 데이터를 차트로 시뮬레이션
+        heatmap_data = pd.DataFrame({
+            "파워 랙 (스쿼트)": [10, 20, 80, 100, 95, 50],
+            "랫풀다운": [30, 40, 60, 80, 70, 40],
+            "러닝머신": [50, 60, 90, 85, 90, 60]
+        }, index=["12:00", "14:00", "18:00", "19:00", "20:00", "22:00"])
+        
+        st.line_chart(heatmap_data)
+        
+        st.warning("⚠️ 19:00 ~ 20:00 시간대 파워 랙 점유율이 한계치(100%)에 도달했습니다.")
+        if st.button("📉 낮 시간대(14시~16시) 방문 이력 회원 대상 '오프피크 전용 쿠폰' 발송"):
+            st.toast("한산한 시간대 방문을 유도하는 타겟 마케팅 쿠폰이 발송되었습니다.")
+
+    elif menu == "🔒 개인정보 및 권한 설정":
+        st.markdown("<h2>🔒 Privacy Compliance 및 RBAC 설정</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>회원의 개인정보 제공 동의 철회 시 시스템 상에서 민감 정보가 즉각 마스킹(블라인드) 처리됩니다.</div>", unsafe_allow_html=True)
+        
+        privacy_df = pd.DataFrame({
+            "회원명": ["김철수", "박지민 (철회)"],
+            "맞춤형 코칭 데이터 활용 동의": ["동의함", "동의 철회"],
+            "체중 / 체성분 데이터 열람": ["75kg / 골격근 35kg", "*** / *** (블라인드)"],
+            "데이터 보유 기한": ["2028-12-31", "파기 대기"]
+        })
+        st.dataframe(privacy_df, hide_index=True, use_container_width=True)
+
+    # 트레이너 전용 임시 화면 (RBAC 시뮬레이션)
+    elif menu in ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"]:
+        st.markdown("<h2>트레이너 제한적 접근 화면</h2>", unsafe_allow_html=True)
+        st.info("RBAC 보안 정책: 본인에게 할당된 회원의 정보와 질문만 열람할 수 있으며, 헬스장 전체 재무 지표 및 엑셀 다운로드 기능은 차단됩니다.")
+
+# ==========================================
+# 🚀 메인 라우팅 (컨트롤 타워)
+# ==========================================
+def main():
+    inject_custom_css() # 동적 CSS 적용
+    
+    if not st.session_state['logged_in']:
+        # 공통 로그인 화면
+        st.title("⚡ 스마트 헬스장 플랫폼 로그인")
+        st.write("접속할 권한(RBAC)을 선택해주세요.")
+        
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("👟 회원 (B2C)으로 접속", use_container_width=True):
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = 'MEMBER'
+                st.rerun()
+        with col2:
+            if st.button("💼 총괄 점주 (Admin)로 접속", use_container_width=True):
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = 'OWNER'
+                st.rerun()
+        with col3:
+            if st.button("💪 일반 트레이너 (Sub-admin)", use_container_width=True):
+                st.session_state['logged_in'] = True
+                st.session_state['role'] = 'TRAINER'
+                st.rerun()
+    else:
+        # 로그인 이후 사이드바 공통 로그아웃 버튼
+        if st.sidebar.button("🚪 로그아웃 (권한 변경)"):
+            st.session_state['logged_in'] = False
+            st.session_state['role'] = None
+            st.rerun()
+            
+        # 권한별 앱 분기
+        if st.session_state['role'] == 'MEMBER':
+            member_app()
+        else:
+            owner_app()
+
+if __name__ == "__main__":
+    main()
