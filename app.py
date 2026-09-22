@@ -7,15 +7,15 @@ from datetime import datetime
 # 1. 페이지 설정 (반드시 최상단에 위치)
 st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
-# 2. 세션 상태 초기화 (메시지 이력 관리 추가)
+# 2. 세션 상태 초기화 (메시지 이력 관리)
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
 if 'msg_history' not in st.session_state:
-    st.session_state['msg_history'] = [] # 발송 이력 저장용 리스트
+    st.session_state['msg_history'] = []
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (표 내부 폰트 완벽 강제 적용)
+# 🎨 다이내믹 커스텀 CSS
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -34,14 +34,13 @@ def inject_custom_css():
         font-style: normal;
     }
     
-    /* 🌟 기본 텍스트 및 표/그래프(SVG text) 내부 요소 폰트 매우 강력하게 강제 적용 */
+    /* 🌟 폰트 강력 적용 */
     html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, 
     svg text, canvas, .stDataFrame, .stDataFrame * {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
     }
     
-    /* 테이블 헤더 및 셀 명시적 폰트 적용 */
     [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td {
         font-family: 'GmarketSans', sans-serif !important;
     }
@@ -49,7 +48,7 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
-        # 🔥 로그인 (첫 페이지)
+        # 🔥 로그인 폼
         st.markdown("""
         <style>
         .stApp {
@@ -172,9 +171,14 @@ def member_app():
                 "총 볼륨(kg)": [2400, 4200, 2100, 1500, 2800, 4800]
             })
             
+            # 💡 Altair 적용: X축 글자 가로 고정
             st.markdown("**📊 총 운동 볼륨(kg) 성장 추이**")
-            chart_data = history_data.set_index("날짜")[["총 볼륨(kg)"]]
-            st.line_chart(chart_data)
+            chart_history = alt.Chart(history_data).mark_line(point=True, color='#00f2fe').encode(
+                x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=0, title='날짜')),
+                y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False)),
+                tooltip=['날짜', '총 볼륨(kg)']
+            ).properties(height=300)
+            st.altair_chart(chart_history, use_container_width=True)
             
             st.markdown("**📋 상세 기록 로그**")
             st.dataframe(history_data, hide_index=True, use_container_width=True)
@@ -183,7 +187,6 @@ def member_app():
             st.markdown("<h3 style='padding-top: 10px;'>📸 나의 오운완 스토리</h3>", unsafe_allow_html=True)
             st.image("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", caption="#오운완 #스마트헬스장 #득근")
             st.write("오늘 소모 칼로리: **450 kcal** | 누적 볼륨: **3,200 kg**")
-            
             st.markdown("<br>", unsafe_allow_html=True)
             st.button("인스타그램으로 바로 공유하기", use_container_width=True)
 
@@ -211,17 +214,14 @@ def owner_app():
         
         st.markdown("<div class='corp-card'>마지막 방문일로부터 14일 경과(조건 A) 또는 방문 빈도가 50% 이상 급감(조건 B)한 회원입니다.</div>", unsafe_allow_html=True)
         
-        # 💡 피드백 반영: X축 글자가 가로로 나오도록 Altair 차트 적용
         st.markdown("**📊 이탈 위험 요인 분포**")
         reason_data = pd.DataFrame({
             "요인": ["장기 미방문 (14일+)", "방문 빈도 급감", "계약 만료 임박"],
             "회원 수": [45, 28, 12]
         })
-        
-        # Altair를 사용해 라벨 각도를 0도(가로)로 고정
         chart = alt.Chart(reason_data).mark_bar(color='#2563EB').encode(
-            x=alt.X('요인', sort=None, axis=alt.Axis(labelAngle=0, title='위험 사유 분류')),
-            y=alt.Y('회원 수', axis=alt.Axis(title='회원 수(명)')),
+            x=alt.X('요인:O', sort=None, axis=alt.Axis(labelAngle=0, title='위험 사유 분류')),
+            y=alt.Y('회원 수:Q', axis=alt.Axis(title='회원 수(명)')),
             tooltip=['요인', '회원 수']
         ).properties(height=300)
         st.altair_chart(chart, use_container_width=True)
@@ -238,7 +238,6 @@ def owner_app():
         })
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
         
-        # 💡 피드백 반영: 메시지 커스텀 및 발송 이력 기록
         st.markdown("<h3>✉️ 1-2. 맞춤형 복귀 유도 알림톡 발송</h3>", unsafe_allow_html=True)
         msg_template = st.text_area("발송할 메시지 내용 수정", 
                                   "회원님, 최근 헬스장 방문이 뜸하시네요! 🏃‍♂️\n다시 시작하시기 좋도록 맞춤형 복귀 루틴을 준비해 두었습니다.\n이번 주에 방문하시면 7일 기간 연장 혜택을 드립니다. 꼭 봬요!")
@@ -260,7 +259,7 @@ def owner_app():
         col2.metric("원포인트 레슨 제안 전환율", "18.2%", "2.1% 🔺")
         col3.metric("이번 달 PT 타겟팅 신규 매출", "12,500,000원", "15% 🔺")
 
-        st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다. 무료 원포인트 레슨 제안을 통한 PT 전환율이 가장 높은 타겟입니다.</div>", unsafe_allow_html=True)
         
         sales_df = pd.DataFrame({
             "회원명": ["최운식", "정종현", "이광수", "전소민", "하동훈", "지석진", "덱스", "기안84", "이시언", "김대호"],
@@ -271,20 +270,24 @@ def owner_app():
         })
         st.dataframe(sales_df, column_config={"수행률": st.column_config.ProgressColumn("운동계획 수행률", min_value=0, max_value=100, format="%d%%")}, hide_index=True, use_container_width=True)
         
-        # 💡 피드백 반영: 시계열 분석 차트 추가
         st.markdown("<h3>📈 개별 회원 정체기 시계열 분석</h3>", unsafe_allow_html=True)
         selected_member = st.selectbox("변화 추이를 분석할 회원을 선택하세요:", sales_df['회원명'])
         
-        # 선택된 회원에 따른 가상 시계열 데이터 생성
         target_exercise = sales_df.loc[sales_df['회원명'] == selected_member, '정체 종목'].values[0]
         plateau_data = pd.DataFrame({
             "주차": ["6주 전", "5주 전", "4주 전", "3주 전", "2주 전", "이번 주"],
-            "중량(kg)": [40, 45, 50, 50, 50, 50] # 성장이 멈춘 플랫(Flat) 라인 시뮬레이션
+            "중량(kg)": [40, 45, 50, 50, 50, 50] 
         })
         st.markdown(f"**{selected_member}** 회원의 **{target_exercise}** 최근 6주간 중량 변화 추이")
-        st.line_chart(plateau_data.set_index("주차"))
+        
+        # 💡 Altair 적용: X축 글자 가로 고정
+        chart2 = alt.Chart(plateau_data).mark_line(point=True, color='#2563EB').encode(
+            x=alt.X('주차:O', sort=None, axis=alt.Axis(labelAngle=0, title='주차')),
+            y=alt.Y('중량(kg):Q', scale=alt.Scale(zero=False)),
+            tooltip=['주차', '중량(kg)']
+        ).properties(height=300)
+        st.altair_chart(chart2, use_container_width=True)
 
-        # 💡 피드백 반영: 발송 대상 다중 선택 및 메시지 커스텀
         st.markdown("<h3>🎟️ 원포인트 PT 쿠폰 맞춤 발송</h3>", unsafe_allow_html=True)
         target_members = st.multiselect("쿠폰 발송 대상을 선택하세요 (기본: 정체기 전원)", sales_df['회원명'].tolist(), default=sales_df['회원명'].tolist())
         pt_msg = st.text_area("쿠폰 발송 메시지 수정", "회원님, 최근 운동 기록을 보니 중량 정체기로 고민이실 것 같아요! 🤔\n가볍게 자세 교정만 받아도 확 달라질 수 있습니다.\n'무료 1:1 원포인트 레슨 쿠폰'을 보내드리니 트레이너 데스크로 편하게 문의주세요!")
@@ -311,11 +314,21 @@ def owner_app():
         
         st.markdown("**📈 주간 AI 자동 발송 트렌드 (관장 명의)**")
         msg_data = pd.DataFrame({
+            "요일": ["월", "화", "수", "목", "금", "토", "일"],
             "신규가입 웰컴 메시지": [12, 15, 10, 8, 20, 25, 15],
             "10kg 증량 축하 메시지": [2, 5, 3, 4, 8, 10, 6],
             "출석왕(주 4회) 격려 메시지": [30, 32, 28, 35, 40, 45, 38]
-        }, index=["월", "화", "수", "목", "금", "토", "일"])
-        st.line_chart(msg_data)
+        })
+        
+        # 💡 Altair 적용: X축 글자 가로 고정 및 데이터 변환 (Melt)
+        msg_melted = msg_data.melt("요일", var_name="메시지 유형", value_name="발송 건수")
+        chart3 = alt.Chart(msg_melted).mark_line(point=True).encode(
+            x=alt.X('요일:O', sort=None, axis=alt.Axis(labelAngle=0, title='요일')),
+            y=alt.Y('발송 건수:Q'),
+            color=alt.Color('메시지 유형:N', legend=alt.Legend(orient='bottom', title=None)),
+            tooltip=['요일', '메시지 유형', '발송 건수']
+        ).properties(height=300)
+        st.altair_chart(chart3, use_container_width=True)
             
         st.markdown("<div class='corp-card'><b>🙋‍♂️ 접수된 회원 질문함 (트레이너 지정 대기)</b></div>", unsafe_allow_html=True)
         
@@ -342,16 +355,28 @@ def owner_app():
 
         st.markdown("<div class='corp-card'>NFC 태그 타임스탬프 기반 기구별 누적 사용량(Volume) 추이입니다. 면적이 넓을수록 병목이 심한 기구입니다.</div>", unsafe_allow_html=True)
         
+        # 💡 피드백 반영: X축 글자가 가로로 나오도록 강제 (Altair Area Chart 변환)
         heatmap_data = pd.DataFrame({
+            "시간대": ["09:00", "11:00", "13:00", "15:00", "17:00", "18:00", "19:00", "20:00", "22:00"],
             "파워 랙 (스쿼트)": [15, 30, 45, 55, 80, 100, 95, 85, 60],
             "트레드밀 (유산소)": [40, 50, 70, 65, 95, 90, 80, 75, 60],
             "랫풀다운": [20, 35, 45, 50, 75, 85, 70, 65, 45],
             "스미스 머신": [15, 25, 40, 45, 70, 90, 85, 70, 50],
             "케이블 크로스오버": [25, 30, 50, 55, 65, 80, 75, 60, 40],
             "레그 프레스": [10, 20, 35, 40, 60, 85, 90, 75, 45]
-        }, index=["09:00", "11:00", "13:00", "15:00", "17:00", "18:00", "19:00", "20:00", "22:00"])
+        })
         
-        st.area_chart(heatmap_data)
+        # 데이터를 겹치게(Area chart) 그리기 위해 Melt 변환
+        df_melted = heatmap_data.melt('시간대', var_name='기구', value_name='누적 사용량')
+        
+        area_chart = alt.Chart(df_melted).mark_area(opacity=0.6).encode(
+            x=alt.X('시간대:O', sort=None, axis=alt.Axis(labelAngle=0, title='시간대')), # X축 글자 가로(0도) 고정
+            y=alt.Y('누적 사용량:Q', stack=None, axis=alt.Axis(title='누적 사용량')), # 겹치게 시각화
+            color=alt.Color('기구:N', legend=alt.Legend(orient='bottom', title=None)),
+            tooltip=['시간대', '기구', '누적 사용량']
+        ).properties(height=350)
+        
+        st.altair_chart(area_chart, use_container_width=True)
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("📉 낮 시간대(13시~16시) 방문 이력 회원군 '오프피크 전용 혜택' 일괄 발송", use_container_width=True):
@@ -382,7 +407,6 @@ def owner_app():
             ],
             "데이터 보유 기한": ["2028-12-31", "파기 대기", "2029-05-15", "2027-10-20", "2026-09-01", "2028-05-01", "2027-11-11", "파기 대기"]
         })
-        # 💡 피드백 반영: CSS 폰트 강제 적용으로 표 내부 글씨체 통일 완료
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
 # ==========================================
