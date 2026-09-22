@@ -11,95 +11,158 @@ if 'logged_in' not in st.session_state:
     st.session_state['role'] = None
 
 # ==========================================
-# 🎨 힙스터 & 모던 디자인 CSS 인젝션
+# 🎨 다이내믹 커스텀 CSS (강렬한 폰트 및 권한별 디자인)
 # ==========================================
 def inject_custom_css():
-    # 🌟 공통 웹 폰트 (Pretendard) 적용
-    font_css = """
+    # 🌟 개성있고 스포티한 폰트 (Gmarket Sans + Montserrat) 적용
+    st.markdown("""
     <style>
-    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
+    @font-face {
+        font-family: 'GmarketSans';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff');
+        font-weight: 500;
+        font-style: normal;
+    }
+    @font-face {
+        font-family: 'GmarketSans';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff');
+        font-weight: 700;
+        font-style: normal;
+    }
     html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6 {
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
+        font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
+        letter-spacing: -0.5px;
     }
     </style>
-    """
-    st.markdown(font_css, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-    if st.session_state['role'] == 'MEMBER':
-        # 회원용: 글래스모피즘(반투명 유리 효과) + 트렌디한 그라데이션 배경
+    if not st.session_state['logged_in']:
+        # 🔥 로그인 (첫 페이지): 강렬한 짐(Gym) 풀스크린 배경 & 네온 포인트
         st.markdown("""
         <style>
         .stApp {
-            /* 힙한 메쉬 그라데이션 배경 */
-            background-color: #ffb8d2;
-            background-image: 
-                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            background-image: linear-gradient(rgba(10, 10, 12, 0.7), rgba(10, 10, 12, 0.9)), url('https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=2070&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
             background-attachment: fixed;
         }
-        /* 글래스모피즘 카드 */
-        .insta-card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 24px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
-            margin-bottom: 25px;
-            color: #ffffff; /* 글자색 흰색으로 */
-        }
-        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b {
-            color: #ffffff !important;
-            text-shadow: 0px 2px 4px rgba(0,0,0,0.3);
-        }
-        /* 네온 포인트 텍스트 */
-        .insta-gradient-text {
-            background: linear-gradient(to right, #00F2FE, #4FACFE);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .hero-title {
+            font-family: 'Montserrat', 'GmarketSans', sans-serif !important;
+            font-size: 4.5rem;
             font-weight: 900;
-            font-size: 2.5rem;
-            margin-bottom: 15px;
+            color: #ffffff;
+            text-transform: uppercase;
             text-align: center;
+            margin-top: 10vh;
+            margin-bottom: 0px;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
-        /* 버튼 스타일링 */
-        .stButton>button { 
-            border-radius: 30px !important; 
-            font-weight: 800 !important;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            color: white !important;
-            border: none !important;
+        .hero-subtitle {
+            font-size: 1.5rem;
+            color: #ccff00; /* 네온 옐로우그린 */
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 50px;
+            text-shadow: 0 2px 10px rgba(204,255,0,0.3);
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        /* 로그인 버튼 네온 스타일링 */
+        .stButton>button {
+            border-radius: 30px !important;
+            font-size: 1.1rem !important;
+            padding: 1.5rem 0 !important;
+            background: transparent !important;
+            border: 2px solid #ccff00 !important;
+            color: #ccff00 !important;
             transition: all 0.3s ease !important;
         }
         .stButton>button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(118, 75, 162, 0.4) !important;
+            background: #ccff00 !important;
+            color: #111 !important;
+            box-shadow: 0 0 20px rgba(204,255,0,0.4) !important;
+            transform: scale(1.02);
         }
-        /* 탭 색상 변경 */
-        .stTabs [data-baseweb="tab"] { color: white !important; font-weight: 600; }
+        </style>
+        """, unsafe_allow_html=True)
+
+    elif st.session_state['role'] == 'MEMBER':
+        # 👟 회원 화면: 다크 & 글래스모피즘 (인스타그램/스포티 감성)
+        st.markdown("""
+        <style>
+        .stApp {
+            background-color: #1a1a24;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,15%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(225,39%,10%,1) 0, transparent 50%);
+        }
+        .insta-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            margin-bottom: 25px;
+            color: #ffffff;
+        }
+        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b {
+            color: #ffffff !important;
+        }
+        .insta-gradient-text {
+            font-family: 'Montserrat', sans-serif !important;
+            background: linear-gradient(to right, #00f2fe, #4facfe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .stButton>button { 
+            border-radius: 30px !important; 
+            font-weight: 800 !important;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+            color: #111 !important;
+            border: none !important;
+        }
+        .stTabs [data-baseweb="tab"] { color: #aaa !important; font-weight: 700; }
+        .stTabs [aria-selected="true"] { color: #fff !important; }
         .stSelectbox label, .stCheckbox label { color: white !important; }
         </style>
         """, unsafe_allow_html=True)
         
     elif st.session_state['role'] in ['OWNER', 'TRAINER']:
-        # 점주/트레이너용: 최신 B2B SaaS 느낌 (깔끔, 화이트, 인디고 포인트)
+        # 💼 점주/트레이너 화면: 시크한 화이트 & 블랙 + 블루 포인트
         st.markdown("""
         <style>
-        .stApp { background-color: #F3F4F6; }
+        .stApp { background-color: #F8F9FA; }
         .corp-card {
             background-color: #ffffff;
-            border-radius: 16px;
+            border-radius: 12px;
             padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            border-left: 6px solid #4F46E5; /* 인디고 포인트 컬러 */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            border-left: 5px solid #111; 
             margin-bottom: 20px;
-            transition: transform 0.2s;
         }
-        .corp-card:hover { transform: translateY(-2px); }
-        h1, h2, h3 { color: #111827; font-weight: 800; letter-spacing: -0.5px; }
-        .stDataFrame { border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #111; font-weight: 800; }
+        .stDataFrame { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stButton>button { 
+            border-radius: 8px !important; 
+            font-weight: 700 !important;
+            background-color: #111 !important;
+            color: #fff !important;
+        }
         </style>
         """, unsafe_allow_html=True)
 
@@ -109,7 +172,7 @@ def inject_custom_css():
 def member_app():
     _, col_main, _ = st.columns([1, 2, 1])
     with col_main:
-        st.markdown("<div class='insta-gradient-text'>✨ Today's Fit</div>", unsafe_allow_html=True)
+        st.markdown("<div class='insta-gradient-text'>Today's Fit</div>", unsafe_allow_html=True)
         st.markdown("<div class='insta-card'><b>@soomin_workout</b>님, 오늘 하루도 득근하세요! 🔥<br>보유 포인트: 1,550 P</div>", unsafe_allow_html=True)
         
         tab1, tab2, tab3, tab4 = st.tabs(["🚀 오늘의 추천", "📡 기구 태그(NFC)", "📈 과거 이력", "📸 오운완"])
@@ -168,13 +231,13 @@ def member_app():
             history_data = pd.DataFrame({
                 "날짜": ["09.05", "09.08", "09.12", "09.15", "09.18", "09.21"],
                 "운동 부위": ["가슴", "하체", "등", "어깨/팔", "가슴", "하체"],
-                "주요 수행 기구": ["벤치프레스 머신", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스 머신", "레그 프레스"],
-                "최고 중량(kg)": [45, 70, 40, 25, 50, 80],
-                "총 볼륨(kg)": [2400, 4200, 2100, 1500, 2800, 4800]
+                "주요 기구": ["벤치프레스", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스", "레그 프레스"],
+                "최고 중량": [45, 70, 40, 25, 50, 80],
+                "총 볼륨": [2400, 4200, 2100, 1500, 2800, 4800]
             })
             
             st.markdown("**📊 총 운동 볼륨(kg) 성장 추이**")
-            chart_data = history_data.set_index("날짜")[["총 볼륨(kg)"]]
+            chart_data = history_data.set_index("날짜")[["총 볼륨"]]
             st.line_chart(chart_data)
             st.markdown("**📋 상세 기록 로그**")
             st.dataframe(history_data, hide_index=True, use_container_width=True)
@@ -255,27 +318,36 @@ def main():
     inject_custom_css()
     
     if not st.session_state['logged_in']:
-        st.title("⚡ 스마트 헬스장 플랫폼 로그인")
-        st.write("접속할 권한(RBAC)을 선택해주세요.")
+        # 🔥 로그인 폼 (히어로 섹션 디자인)
+        st.markdown("<div class='hero-title'>FITPASS PRO</div>", unsafe_allow_html=True)
+        st.markdown("<div class='hero-subtitle'>스마트 헬스장 데이터 솔루션</div>", unsafe_allow_html=True)
         
-        col1, col2, col3 = st.columns(3)
-        with col1:
+        _, col, _ = st.columns([1, 2, 1])
+        with col:
+            st.markdown("<div class='login-card'>", unsafe_allow_html=True)
+            
             if st.button("👟 회원 (B2C)으로 접속", use_container_width=True):
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = 'MEMBER'
                 st.rerun()
-        with col2:
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+                
             if st.button("💼 총괄 점주 (Admin)로 접속", use_container_width=True):
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = 'OWNER'
                 st.rerun()
-        with col3:
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+                
             if st.button("💪 일반 트레이너 (Sub-admin)", use_container_width=True):
                 st.session_state['logged_in'] = True
                 st.session_state['role'] = 'TRAINER'
                 st.rerun()
+                
+            st.markdown("</div>", unsafe_allow_html=True)
     else:
-        if st.sidebar.button("🚪 로그아웃 (권한 변경)"):
+        if st.sidebar.button("🚪 시스템 종료 (로그아웃)"):
             st.session_state['logged_in'] = False
             st.session_state['role'] = None
             st.rerun()
