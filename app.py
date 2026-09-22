@@ -11,10 +11,9 @@ if 'logged_in' not in st.session_state:
     st.session_state['role'] = None
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (폰트, 버튼 크기, 캔버스 폰트 강제 적용)
+# 🎨 다이내믹 커스텀 CSS (폰트, 배경, 표/그래프 강제 적용)
 # ==========================================
 def inject_custom_css():
-    # 🌟 Gmarket Sans & Montserrat 폰트 적용 (그래프, 표 텍스트까지 강제)
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
@@ -30,9 +29,11 @@ def inject_custom_css():
         font-weight: 700;
         font-style: normal;
     }
-    /* 기본 텍스트 및 표/그래프 내부 요소 폰트 강제 적용 */
+    
+    /* 🌟 기본 텍스트 및 표/그래프(SVG text) 내부 요소 폰트 강제 적용 */
     html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, 
-    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td, text {
+    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td, 
+    svg text, canvas {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
     }
@@ -40,12 +41,12 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
-        # 🔥 로그인 (첫 페이지): 30대 남녀 에너제틱 배경 & 버튼 크기 확대
+        # 🔥 로그인 (첫 페이지): 30대 남녀 에너제틱 짐(Gym) 배경 & 텍스트 대폭 확대
         st.markdown("""
         <style>
         .stApp {
-            /* 30대 남녀가 함께 운동하는 역동적인 이미지로 교체 */
-            background-image: linear-gradient(rgba(10, 10, 12, 0.6), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070&auto=format&fit=crop');
+            /* 30대 남녀가 짐에서 함께 역동적으로 운동하는 고해상도 이미지 */
+            background-image: linear-gradient(rgba(10, 10, 12, 0.65), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -63,7 +64,7 @@ def inject_custom_css():
         }
         .hero-subtitle {
             font-size: 1.6rem;
-            color: #ccff00; /* 네온 옐로우그린 */
+            color: #ccff00;
             text-align: center;
             font-weight: 700;
             margin-bottom: 50px;
@@ -78,12 +79,12 @@ def inject_custom_css():
             padding: 40px;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
-        /* 로그인 버튼 텍스트 대폭 확대 및 네온 스타일링 */
+        /* 버튼 텍스트 및 패딩 대폭 확대 */
         .stButton>button {
             border-radius: 30px !important;
-            font-size: 1.5rem !important; /* 글자 크기 확대 (기존 1.1rem -> 1.5rem) */
+            font-size: 1.6rem !important; 
             font-weight: 900 !important;
-            padding: 2rem 0 !important; /* 상하 여백 확대하여 버튼 자체를 키움 */
+            padding: 2.2rem 0 !important; 
             background: transparent !important;
             border: 2px solid #ccff00 !important;
             color: #ccff00 !important;
@@ -99,7 +100,7 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
-        # 👟 회원 화면: 다크 & 글래스모피즘
+        # 👟 회원 화면: 다크 & 인스타그램 감성 (글래스모피즘)
         st.markdown("""
         <style>
         .stApp {
@@ -145,7 +146,7 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
         
     elif st.session_state['role'] in ['OWNER', 'TRAINER']:
-        # 💼 점주/트레이너 화면: 시크한 화이트 & 블랙
+        # 💼 점주/트레이너 화면: 깔끔하고 사무적인 엔터프라이즈(SaaS) 감성
         st.markdown("""
         <style>
         .stApp { background-color: #F8F9FA; }
@@ -164,6 +165,7 @@ def inject_custom_css():
             font-weight: 700 !important;
             background-color: #111 !important;
             color: #fff !important;
+            font-size: 1.1rem !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -215,6 +217,7 @@ def member_app():
                     if st.button("유산소 세션 시작", use_container_width=True):
                         st.toast("유산소 기록이 시작되었습니다.")
                 else:
+                    # 마찰 최소화(Friction Management): 이전 중량 자동 로드 (FRD 요구사항)
                     st.info(f"💡 최근 수행하신 {machine} 기록을 불러왔습니다. 오늘도 동일하게 진행할까요?")
                     col_w, col_r = st.columns(2)
                     with col_w:
@@ -243,8 +246,7 @@ def member_app():
             st.line_chart(chart_data)
             
             st.markdown("**📋 상세 기록 로그**")
-            # 폰트 강제 적용을 위해 st.table 활용
-            st.table(history_data)
+            st.dataframe(history_data, hide_index=True, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
         with tab4:
@@ -256,64 +258,114 @@ def member_app():
             st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 💻 점주/트레이너 (B2B) 대시보드
+# 💻 점주/트레이너 (B2B) 대시보드 (FRD 100% 반영)
 # ==========================================
 def owner_app():
     is_owner = (st.session_state['role'] == 'OWNER')
     role_name = "총괄 점주(관장)" if is_owner else "트레이너(Sub-admin)"
     st.sidebar.markdown(f"**접속 계정:** {role_name}")
     
+    # FRD 요구사항: RBAC에 따른 메뉴 권한 분리[cite: 11]
     if is_owner:
         menu = st.sidebar.radio("📋 대시보드 메뉴", [
             "🚨 Epic 1. 이탈 위험 관리", 
             "🎯 Epic 2. PT 타겟팅 & 성장", 
-            "🏢 Epic 3. 시설 및 오프피크"
+            "💬 Epic 3. 트레이너 KPI & 소통", 
+            "🏢 Epic 4. 시설 및 오프피크",
+            "🔒 개인정보 및 권한 설정"
         ])
     else:
-        menu = st.sidebar.radio("📋 대시보드 메뉴", ["🎯 내 담당 회원 관리"])
-        st.sidebar.info("💡 Admin 권한 메뉴는 숨김 처리되었습니다.")
+        menu = st.sidebar.radio("📋 대시보드 메뉴", ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"])
+        st.sidebar.info("💡 Admin(점주) 권한 메뉴는 숨김 처리되었습니다.")
 
+    # [FRD 반영] Epic 1: 이탈 위험 신호 자동 감지 및 컨택[cite: 11]
     if menu == "🚨 Epic 1. 이탈 위험 관리":
-        st.markdown("<h2>🚨 이탈 위험 신호 자동 감지 보드</h2>", unsafe_allow_html=True)
-        st.markdown("<div class='corp-card'>14일 미방문 또는 방문 빈도가 50% 이상 급감한 회원 리스트입니다. 조기 개입으로 이탈률을 획기적으로 낮출 수 있습니다.</div>", unsafe_allow_html=True)
+        st.markdown("<h2>🚨 1-1. 이탈 위험 신호 자동 감지 보드</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>14일 미방문(조건 A) 또는 최근 4주 대비 1주 방문 빈도가 50% 이상 급감(조건 B)한 회원 리스트입니다.<br>🚨 메인 대시보드 배지 알림: <b>오늘 관리가 필요한 이탈 위험 회원 (2명)</b></div>", unsafe_allow_html=True)
         
         churn_df = pd.DataFrame({
             "회원명": ["김철수", "박지민"],
-            "위험 사유": ["15일 장기 미방문", "주 4회 ➔ 주 1회 급감"],
+            "위험 사유": ["조건 A (15일 장기 미방문)", "조건 B (주 4회 ➔ 주 1회 급감)"],
             "이탈 확률": ["88%", "75%"]
         })
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
-        if st.button("✉️ 위험군 회원 전체 복귀유도 알림톡 자동 발송"):
+        
+        st.markdown("<h2>✉️ 1-2. 원클릭 자동 컨택</h2>", unsafe_allow_html=True)
+        if st.button("위험군 회원 전체 '복귀유도 맞춤 루틴 템플릿' 카카오 알림톡 전송"):
             st.toast("메시지가 성공적으로 발송되었습니다.")
 
+    # [FRD 반영] Epic 2: PT 타겟팅 (정체기) 및 목표 달성률[cite: 11]
     elif menu == "🎯 Epic 2. PT 타겟팅 & 성장":
-        st.markdown("<h2>🎯 정체기 회원 타겟팅 (PT 영업)</h2>", unsafe_allow_html=True)
-        st.markdown("<div class='corp-card'>3주 이상 주력 기구의 중량 갱신(PR)이 없는 정체기 회원입니다. 원포인트 레슨 제안을 통한 PT 전환율이 가장 높은 타겟입니다.</div>", unsafe_allow_html=True)
+        st.markdown("<h2>🎯 2-1. 정체기 회원 타겟팅 (PT 영업 보드)</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다. 원포인트 레슨 제안에 최적화되어 있습니다.</div>", unsafe_allow_html=True)
         
         sales_df = pd.DataFrame({
             "회원명": ["최운식", "정종현", "유재석"],
-            "정체 종목": ["벤치프레스", "스쿼트", "데드리프트"],
+            "정체 종목": ["벤치프레스 (가슴)", "스쿼트 (하체)", "데드리프트 (등)"],
             "정체 기간": ["4주째 50kg", "3주째 80kg", "5주째 60kg"],
             "수행률": [65, 40, 80] 
         })
+        
+        # 2-2. 목표 달성률 Progress Bar 시각화 반영[cite: 11]
         st.dataframe(
             sales_df,
-            column_config={"수행률": st.column_config.ProgressColumn("계획 수행률", min_value=0, max_value=100, format="%d%%")},
+            column_config={"수행률": st.column_config.ProgressColumn("운동계획 수행률(목표 달성)", min_value=0, max_value=100, format="%d%%")},
             hide_index=True, use_container_width=True
         )
+        if st.button("💪 정체기 회원 '원포인트 PT 제안' 푸시 발송"):
+            st.toast("영업 타겟팅 제안이 전송되었습니다.")
 
-    elif menu == "🏢 Epic 3. 시설 및 오프피크":
+    # [FRD 반영] Epic 3: 자동 축하 메시지 및 트레이너 응답 KPI[cite: 11]
+    elif menu == "💬 Epic 3. 트레이너 KPI & 소통":
+        st.markdown("<h2>💬 트레이너 소통 및 응답 대시보드</h2>", unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("<div class='corp-card'><b>🤖 3-1. 시스템 자동 웰컴/축하 메시지 (관장 명의)</b><br>신규 1주차 3회 출석 달성: 이번 주 12건 자동 발송<br>최초 10kg 증량 달성: 이번 주 5건 자동 발송</div>", unsafe_allow_html=True)
+        with col2:
+            st.markdown("<div class='corp-card'><b>📊 3-2. 트레이너 응답 성과 지표 (KPI)</b><br>평균 질문 응답률: 92%<br>평균 응답 속도: 45분 (목표 KPI: 60분 이내 달성)</div>", unsafe_allow_html=True)
+            
+        st.subheader("미해결 회원 질문함")
+        qna_df = pd.DataFrame({
+            "회원명": ["박수민", "김민지"],
+            "질문 내용": ["벤치프레스 할 때 어깨가 결려요.", "인바디 쟀는데 체지방이 안 빠져요."],
+            "담당 트레이너": ["강태혁", "이국종"],
+            "대기 시간": ["45분", "2시간 10분 ⚠️"]
+        })
+        st.dataframe(qna_df, hide_index=True, use_container_width=True)
+
+    # [FRD 반영] Epic 4: 히트맵 분석 및 오프피크 마케팅[cite: 11]
+    elif menu == "🏢 Epic 4. 시설 및 오프피크":
         st.markdown("<h2>🏢 기구 혼잡도 히트맵 및 공간 최적화</h2>", unsafe_allow_html=True)
-        st.markdown("<div class='corp-card'>NFC 태그 타임스탬프 기반 기구별 하루 점유율입니다. 병목 시간대를 파악하여 오프피크(Off-peak) 타임 프로모션을 기획하세요.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>4-1. NFC 태그 타임스탬프 기반 기구별 하루 점유율(병목 시간대) 시각화입니다.</div>", unsafe_allow_html=True)
         
         heatmap_data = pd.DataFrame({
             "파워 랙 (스쿼트)": [10, 20, 80, 100, 95, 50],
             "랫풀다운": [30, 40, 60, 80, 70, 40]
         }, index=["12:00", "14:00", "18:00", "19:00", "20:00", "22:00"])
         st.line_chart(heatmap_data)
+        
+        st.markdown("<h2>📉 4-2. 오프피크(Off-peak) 타겟 마케팅</h2>", unsafe_allow_html=True)
+        if st.button("낮 시간대(14시~16시) 방문 이력 회원 대상 '오프피크 전용 쿠폰' 일괄 발송"):
+            st.toast("한산한 시간대 방문을 유도하는 쿠폰이 발송되었습니다.")
 
-    elif menu == "🎯 내 담당 회원 관리":
+    # [FRD 반영] 시스템 필수 요구사항: 개인정보 동의 관리 (Privacy Compliance)[cite: 11]
+    elif menu == "🔒 개인정보 및 권한 설정":
+        st.markdown("<h2>🔒 Privacy Compliance 및 동의 관리</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>회원의 개인정보 제공 동의 철회 시 시스템 상에서 민감 정보(체성분 등)가 즉각 마스킹(블라인드) 처리되어 법적 리스크를 차단합니다.</div>", unsafe_allow_html=True)
+        
+        privacy_df = pd.DataFrame({
+            "회원명": ["김철수", "박지민 (철회)"],
+            "맞춤형 코칭 데이터 활용 동의": ["동의함", "동의 철회 🚫"],
+            "체중 / 체성분 데이터 열람": ["75.2kg / 골격근 35kg", "*** / *** (블라인드 처리)"],
+            "데이터 보유 기한": ["2028-12-31", "파기 대기"]
+        })
+        st.dataframe(privacy_df, hide_index=True, use_container_width=True)
+
+    # 트레이너(Sub-admin) 전용 화면
+    elif menu in ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"]:
         st.markdown("<h2>트레이너 제한적 접근 화면</h2>", unsafe_allow_html=True)
+        st.info("RBAC 보안 정책에 따라 관리자 대시보드(매출, 전체 회원 통계)는 차단되었습니다.")
 
 # ==========================================
 # 🚀 메인 라우팅 (컨트롤 타워)
@@ -322,7 +374,7 @@ def main():
     inject_custom_css()
     
     if not st.session_state['logged_in']:
-        # 🔥 로그인 폼 (히어로 섹션 디자인)
+        # 🔥 로그인 폼 (30대 남녀 배경 & 큰 버튼 적용)
         st.markdown("<div class='hero-title'>FITPASS PRO</div>", unsafe_allow_html=True)
         st.markdown("<div class='hero-subtitle'>스마트 헬스장 데이터 솔루션</div>", unsafe_allow_html=True)
         
@@ -351,7 +403,7 @@ def main():
                 
             st.markdown("</div>", unsafe_allow_html=True)
     else:
-        if st.sidebar.button("🚪 시스템 종료 (로그아웃)"):
+        if st.sidebar.button("🚪 시스템 종료 (권한 다시 선택)"):
             st.session_state['logged_in'] = False
             st.session_state['role'] = None
             st.rerun()
