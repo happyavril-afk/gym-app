@@ -1,17 +1,21 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import altair as alt
+from datetime import datetime
 
 # 1. 페이지 설정 (반드시 최상단에 위치)
 st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
-# 2. 세션 상태 초기화
+# 2. 세션 상태 초기화 (메시지 이력 관리 추가)
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
+if 'msg_history' not in st.session_state:
+    st.session_state['msg_history'] = [] # 발송 이력 저장용 리스트
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (폰트, 배경, 가독성 개선)
+# 🎨 다이내믹 커스텀 CSS (표 내부 폰트 완벽 강제 적용)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -30,18 +34,22 @@ def inject_custom_css():
         font-style: normal;
     }
     
-    /* 🌟 기본 텍스트 및 표/그래프(SVG text) 내부 요소 폰트 강제 적용 */
+    /* 🌟 기본 텍스트 및 표/그래프(SVG text) 내부 요소 폰트 매우 강력하게 강제 적용 */
     html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, 
-    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td, 
-    svg text, canvas {
+    svg text, canvas, .stDataFrame, .stDataFrame * {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
+    }
+    
+    /* 테이블 헤더 및 셀 명시적 폰트 적용 */
+    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td {
+        font-family: 'GmarketSans', sans-serif !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
-        # 🔥 로그인 (첫 페이지): 30대 남녀 에너제틱 짐(Gym) 배경
+        # 🔥 로그인 (첫 페이지)
         st.markdown("""
         <style>
         .stApp {
@@ -50,162 +58,43 @@ def inject_custom_css():
             background-position: center;
             background-attachment: fixed;
         }
-        .hero-title {
-            font-family: 'Montserrat', 'GmarketSans', sans-serif !important;
-            font-size: 5.5rem;
-            font-weight: 900;
-            color: #ffffff;
-            text-transform: uppercase;
-            text-align: center;
-            margin-top: 15vh;
-            margin-bottom: 0px;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }
-        .hero-subtitle {
-            font-size: 1.6rem;
-            color: #ccff00;
-            text-align: center;
-            font-weight: 700;
-            margin-bottom: 60px;
-            text-shadow: 0 2px 10px rgba(204,255,0,0.3);
-        }
-        .login-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-        }
-        .stButton>button {
-            border-radius: 30px !important;
-            font-size: 1.6rem !important; 
-            font-weight: 900 !important;
-            padding: 2.2rem 0 !important; 
-            background: transparent !important;
-            border: 2px solid #ccff00 !important;
-            color: #ccff00 !important;
-            transition: all 0.3s ease !important;
-        }
-        .stButton>button:hover {
-            background: #ccff00 !important;
-            color: #111 !important;
-            box-shadow: 0 0 20px rgba(204,255,0,0.5) !important;
-            transform: scale(1.03);
-        }
+        .hero-title { font-family: 'Montserrat', 'GmarketSans', sans-serif !important; font-size: 5.5rem; font-weight: 900; color: #ffffff; text-transform: uppercase; text-align: center; margin-top: 15vh; margin-bottom: 0px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .hero-subtitle { font-size: 1.6rem; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 60px; text-shadow: 0 2px 10px rgba(204,255,0,0.3); }
+        .login-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
+        .stButton>button { border-radius: 30px !important; font-size: 1.6rem !important; font-weight: 900 !important; padding: 2.2rem 0 !important; background: transparent !important; border: 2px solid #ccff00 !important; color: #ccff00 !important; transition: all 0.3s ease !important; }
+        .stButton>button:hover { background: #ccff00 !important; color: #111 !important; box-shadow: 0 0 20px rgba(204,255,0,0.5) !important; transform: scale(1.03); }
         </style>
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
-        # 👟 회원 화면: 다크 & 인스타그램 감성 (가독성 완벽 해결)
+        # 👟 회원 화면
         st.markdown("""
         <style>
-        .stApp {
-            background-color: #0f172a !important; 
-            background-image: 
-                radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), 
-                radial-gradient(at 100% 0%, #312e81 0, transparent 50%) !important;
-            background-attachment: fixed !important;
-        }
-        .stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
-        .stApp span, .stApp label, .stApp div, .stApp b, .stApp li {
-            color: #ffffff !important;
-        }
-        .insta-gradient-text {
-            font-family: 'Montserrat', sans-serif !important;
-            background: linear-gradient(to right, #00f2fe, #4facfe) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            font-weight: 900 !important;
-            font-size: 2.8rem !important;
-            margin-bottom: 15px !important;
-            text-align: center !important;
-            text-transform: uppercase !important;
-        }
-        .profile-card {
-            background: rgba(255, 255, 255, 0.12) !important;
-            backdrop-filter: blur(16px) !important;
-            -webkit-backdrop-filter: blur(16px) !important;
-            border-radius: 24px !important;
-            padding: 25px !important;
-            border: 1px solid rgba(255, 255, 255, 0.25) !important;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
-            margin-bottom: 25px !important;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            background-color: rgba(255, 255, 255, 0.1) !important;
-            border-radius: 15px !important;
-            padding: 8px !important;
-            gap: 10px !important;
-        }
-        .stTabs [data-baseweb="tab"] p { 
-            color: #f8fafc !important; 
-            font-weight: 700 !important; 
-            font-size: 1.2rem !important; 
-        }
-        .stTabs [aria-selected="true"] { 
-            background-color: rgba(204, 255, 0, 0.15) !important; 
-            border-radius: 10px !important;
-            border: 1px solid rgba(204, 255, 0, 0.4) !important;
-        }
-        .stTabs [aria-selected="true"] p { 
-            color: #ccff00 !important; 
-            text-shadow: 0 0 10px rgba(204,255,0,0.5) !important;
-        }
-        div[data-testid="stAlert"] {
-            background-color: rgba(255, 255, 255, 0.1) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-        }
-        .stButton>button { 
-            border-radius: 30px !important; 
-            font-weight: 800 !important;
-            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
-            color: #111 !important; 
-            border: none !important;
-            font-size: 1.2rem !important;
-            padding: 1.5rem !important;
-        }
-        .stSelectbox div[data-baseweb="select"] > div, .stNumberInput div[data-baseweb="input"] > div {
-            background-color: rgba(0,0,0,0.4) !important;
-            color: white !important;
-            border: 1px solid rgba(255,255,255,0.3) !important;
-        }
+        .stApp { background-color: #0f172a !important; background-image: radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), radial-gradient(at 100% 0%, #312e81 0, transparent 50%) !important; background-attachment: fixed !important; }
+        .stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp span, .stApp label, .stApp div, .stApp b, .stApp li { color: #ffffff !important; }
+        .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.8rem !important; margin-bottom: 15px !important; text-align: center !important; text-transform: uppercase !important; }
+        .profile-card { background: rgba(255, 255, 255, 0.12) !important; backdrop-filter: blur(16px) !important; -webkit-backdrop-filter: blur(16px) !important; border-radius: 24px !important; padding: 25px !important; border: 1px solid rgba(255, 255, 255, 0.25) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important; margin-bottom: 25px !important; }
+        .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.1) !important; border-radius: 15px !important; padding: 8px !important; gap: 10px !important; }
+        .stTabs [data-baseweb="tab"] p { color: #f8fafc !important; font-weight: 700 !important; font-size: 1.2rem !important; }
+        .stTabs [aria-selected="true"] { background-color: rgba(204, 255, 0, 0.15) !important; border-radius: 10px !important; border: 1px solid rgba(204, 255, 0, 0.4) !important; }
+        .stTabs [aria-selected="true"] p { color: #ccff00 !important; text-shadow: 0 0 10px rgba(204,255,0,0.5) !important; }
+        div[data-testid="stAlert"] { background-color: rgba(255, 255, 255, 0.1) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
+        .stButton>button { border-radius: 30px !important; font-weight: 800 !important; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111 !important; border: none !important; font-size: 1.2rem !important; padding: 1.5rem !important; }
+        .stSelectbox div[data-baseweb="select"] > div, .stNumberInput div[data-baseweb="input"] > div { background-color: rgba(0,0,0,0.4) !important; color: white !important; border: 1px solid rgba(255,255,255,0.3) !important; }
         </style>
         """, unsafe_allow_html=True)
         
     elif st.session_state['role'] == 'OWNER':
-        # 💼 점주 화면: 깔끔하고 화사한 엔터프라이즈 대시보드
+        # 💼 점주 화면
         st.markdown("""
         <style>
         .stApp { background-color: #F4F7F9; }
-        .corp-card {
-            background-color: #ffffff;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            border-left: 6px solid #2563EB; 
-            margin-bottom: 25px;
-        }
+        .corp-card { background-color: #ffffff; border-radius: 16px; padding: 24px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); border-left: 6px solid #2563EB; margin-bottom: 25px; }
         h1, h2, h3 { color: #1e293b; font-weight: 900; }
         .stDataFrame { border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
-        .stButton>button { 
-            border-radius: 10px !important; 
-            font-weight: 800 !important;
-            background-color: #2563EB !important;
-            color: #fff !important;
-            font-size: 1.15rem !important;
-            padding: 0.8rem !important;
-            border: none !important;
-        }
+        .stButton>button { border-radius: 10px !important; font-weight: 800 !important; background-color: #2563EB !important; color: #fff !important; font-size: 1.15rem !important; padding: 0.8rem !important; border: none !important; }
         .stButton>button:hover { background-color: #1D4ED8 !important; }
-        div[data-testid="metric-container"] {
-            background-color: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
-            border: 1px solid #e2e8f0;
-        }
+        div[data-testid="metric-container"] { background-color: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -279,16 +168,16 @@ def member_app():
                 "날짜": ["09.05", "09.08", "09.12", "09.15", "09.18", "09.21"],
                 "운동 부위": ["가슴", "하체", "등", "어깨/팔", "가슴", "하체"],
                 "주요 기구": ["벤치프레스", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스", "레그 프레스"],
-                "최고 중량": [45, 70, 40, 25, 50, 80],
-                "총 볼륨": [2400, 4200, 2100, 1500, 2800, 4800]
+                "최고 중량(kg)": [45, 70, 40, 25, 50, 80],
+                "총 볼륨(kg)": [2400, 4200, 2100, 1500, 2800, 4800]
             })
             
             st.markdown("**📊 총 운동 볼륨(kg) 성장 추이**")
-            chart_data = history_data.set_index("날짜")[["총 볼륨"]]
+            chart_data = history_data.set_index("날짜")[["총 볼륨(kg)"]]
             st.line_chart(chart_data)
             
             st.markdown("**📋 상세 기록 로그**")
-            st.table(history_data)
+            st.dataframe(history_data, hide_index=True, use_container_width=True)
 
         with tab4:
             st.markdown("<h3 style='padding-top: 10px;'>📸 나의 오운완 스토리</h3>", unsafe_allow_html=True)
@@ -299,7 +188,7 @@ def member_app():
             st.button("인스타그램으로 바로 공유하기", use_container_width=True)
 
 # ==========================================
-# 💻 점주 (OWNER) B2B 대시보드 (데이터/시각화 대폭 강화)
+# 💻 점주 (OWNER) B2B 대시보드
 # ==========================================
 def owner_app():
     st.sidebar.markdown(f"**🏢 총괄 점주(Admin) 대시보드**")
@@ -315,7 +204,6 @@ def owner_app():
     if menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 이탈 위험 신호 자동 감지 보드")
         
-        # 핵심 지표 (Metrics)
         col1, col2, col3 = st.columns(3)
         col1.metric("이번 주 신규 이탈 위험군", "12명", "+3명 🔺")
         col2.metric("AI 예측 이탈 방어 성공률", "68.5%", "4.2% 🔺")
@@ -323,12 +211,21 @@ def owner_app():
         
         st.markdown("<div class='corp-card'>마지막 방문일로부터 14일 경과(조건 A) 또는 방문 빈도가 50% 이상 급감(조건 B)한 회원입니다.</div>", unsafe_allow_html=True)
         
-        # 시각화: 요인별 이탈 위험 분포
+        # 💡 피드백 반영: X축 글자가 가로로 나오도록 Altair 차트 적용
         st.markdown("**📊 이탈 위험 요인 분포**")
-        reason_data = pd.DataFrame({"회원 수": [45, 28, 12]}, index=["장기 미방문 (14일+)", "방문 빈도 급감", "계약 만료 임박"])
-        st.bar_chart(reason_data)
+        reason_data = pd.DataFrame({
+            "요인": ["장기 미방문 (14일+)", "방문 빈도 급감", "계약 만료 임박"],
+            "회원 수": [45, 28, 12]
+        })
         
-        # 확장된 데이터프레임
+        # Altair를 사용해 라벨 각도를 0도(가로)로 고정
+        chart = alt.Chart(reason_data).mark_bar(color='#2563EB').encode(
+            x=alt.X('요인', sort=None, axis=alt.Axis(labelAngle=0, title='위험 사유 분류')),
+            y=alt.Y('회원 수', axis=alt.Axis(title='회원 수(명)')),
+            tooltip=['요인', '회원 수']
+        ).properties(height=300)
+        st.altair_chart(chart, use_container_width=True)
+        
         churn_df = pd.DataFrame({
             "회원명": ["김철수", "박지민", "이동국", "한소희", "마동석", "이지은", "유재석", "강호동", "송지효", "김종국"],
             "위험 사유": [
@@ -341,9 +238,19 @@ def owner_app():
         })
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("✉️ 위험군 회원 전체 '복귀유도 맞춤 루틴 템플릿' 카카오 알림톡 자동 전송", use_container_width=True):
-            st.toast("10명의 회원에게 메시지가 성공적으로 발송되었습니다.")
+        # 💡 피드백 반영: 메시지 커스텀 및 발송 이력 기록
+        st.markdown("<h3>✉️ 1-2. 맞춤형 복귀 유도 알림톡 발송</h3>", unsafe_allow_html=True)
+        msg_template = st.text_area("발송할 메시지 내용 수정", 
+                                  "회원님, 최근 헬스장 방문이 뜸하시네요! 🏃‍♂️\n다시 시작하시기 좋도록 맞춤형 복귀 루틴을 준비해 두었습니다.\n이번 주에 방문하시면 7일 기간 연장 혜택을 드립니다. 꼭 봬요!")
+        
+        if st.button("위험군 전체 10명에게 알림톡 전송", type="primary"):
+            now = datetime.now().strftime("%Y-%m-%d %H:%M")
+            st.session_state['msg_history'].insert(0, {"발송 시간": now, "대상": "이탈 위험군 전체 (10명)", "발송 내용": msg_template, "유형": "복귀 유도"})
+            st.success("10명의 회원에게 메시지가 성공적으로 발송되었습니다.")
+            
+        if st.session_state['msg_history']:
+            with st.expander("📝 최근 알림톡 발송 이력 보기", expanded=False):
+                st.dataframe(pd.DataFrame(st.session_state['msg_history']), hide_index=True, use_container_width=True)
 
     elif menu == "🎯 Epic 2. PT 타겟팅 & 영업":
         st.title("🎯 정체기 회원 타겟팅 (PT 영업 보드)")
@@ -353,9 +260,8 @@ def owner_app():
         col2.metric("원포인트 레슨 제안 전환율", "18.2%", "2.1% 🔺")
         col3.metric("이번 달 PT 타겟팅 신규 매출", "12,500,000원", "15% 🔺")
 
-        st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다. 무료 원포인트 레슨 제안을 통한 PT 전환율이 가장 높은 타겟입니다.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다.</div>", unsafe_allow_html=True)
         
-        # 확장된 데이터프레임
         sales_df = pd.DataFrame({
             "회원명": ["최운식", "정종현", "이광수", "전소민", "하동훈", "지석진", "덱스", "기안84", "이시언", "김대호"],
             "정체 종목": ["벤치프레스", "스쿼트", "데드리프트", "숄더 프레스", "레그 프레스", "랫풀다운", "벤치프레스", "스쿼트", "케이블로우", "레그컬"],
@@ -363,16 +269,37 @@ def owner_app():
             "AI 추천 세일즈 액션": ["자세 교정 제안", "보조 운동 제안", "하체 루틴 변경", "유연성 집중 레슨", "고중량 안전 보조", "그립법 변경 제안", "식단 병행 상담", "관절 안정성 레슨", "자극점 찾기 레슨", "햄스트링 집중 레슨"],
             "수행률": [65, 40, 80, 25, 30, 55, 95, 45, 60, 75] 
         })
+        st.dataframe(sales_df, column_config={"수행률": st.column_config.ProgressColumn("운동계획 수행률", min_value=0, max_value=100, format="%d%%")}, hide_index=True, use_container_width=True)
         
-        st.dataframe(
-            sales_df,
-            column_config={"수행률": st.column_config.ProgressColumn("운동계획 수행률", min_value=0, max_value=100, format="%d%%")},
-            hide_index=True, use_container_width=True
-        )
+        # 💡 피드백 반영: 시계열 분석 차트 추가
+        st.markdown("<h3>📈 개별 회원 정체기 시계열 분석</h3>", unsafe_allow_html=True)
+        selected_member = st.selectbox("변화 추이를 분석할 회원을 선택하세요:", sales_df['회원명'])
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("💪 정체기 회원 전원에게 '무료 원포인트 레슨' 쿠폰 푸시 일괄 발송", use_container_width=True):
-            st.toast("타겟팅된 회원들에게 영업 제안이 전송되었습니다.")
+        # 선택된 회원에 따른 가상 시계열 데이터 생성
+        target_exercise = sales_df.loc[sales_df['회원명'] == selected_member, '정체 종목'].values[0]
+        plateau_data = pd.DataFrame({
+            "주차": ["6주 전", "5주 전", "4주 전", "3주 전", "2주 전", "이번 주"],
+            "중량(kg)": [40, 45, 50, 50, 50, 50] # 성장이 멈춘 플랫(Flat) 라인 시뮬레이션
+        })
+        st.markdown(f"**{selected_member}** 회원의 **{target_exercise}** 최근 6주간 중량 변화 추이")
+        st.line_chart(plateau_data.set_index("주차"))
+
+        # 💡 피드백 반영: 발송 대상 다중 선택 및 메시지 커스텀
+        st.markdown("<h3>🎟️ 원포인트 PT 쿠폰 맞춤 발송</h3>", unsafe_allow_html=True)
+        target_members = st.multiselect("쿠폰 발송 대상을 선택하세요 (기본: 정체기 전원)", sales_df['회원명'].tolist(), default=sales_df['회원명'].tolist())
+        pt_msg = st.text_area("쿠폰 발송 메시지 수정", "회원님, 최근 운동 기록을 보니 중량 정체기로 고민이실 것 같아요! 🤔\n가볍게 자세 교정만 받아도 확 달라질 수 있습니다.\n'무료 1:1 원포인트 레슨 쿠폰'을 보내드리니 트레이너 데스크로 편하게 문의주세요!")
+        
+        if st.button("💪 선택한 회원에게 쿠폰 발송하기", type="primary"):
+            if len(target_members) > 0:
+                now = datetime.now().strftime("%Y-%m-%d %H:%M")
+                st.session_state['msg_history'].insert(0, {"발송 시간": now, "대상": f"정체기 회원 {len(target_members)}명", "발송 내용": pt_msg, "유형": "PT 영업 쿠폰"})
+                st.success(f"{len(target_members)}명의 회원에게 영업 제안이 전송되었습니다.")
+            else:
+                st.error("발송할 대상을 최소 1명 이상 선택해주세요.")
+                
+        if st.session_state['msg_history']:
+            with st.expander("📝 최근 알림톡 발송 이력 보기", expanded=False):
+                st.dataframe(pd.DataFrame(st.session_state['msg_history']), hide_index=True, use_container_width=True)
 
     elif menu == "💬 Epic 3. AI 소통 & 회원 CS":
         st.title("💬 AI 자동 소통 및 회원 CS 현황")
@@ -415,7 +342,6 @@ def owner_app():
 
         st.markdown("<div class='corp-card'>NFC 태그 타임스탬프 기반 기구별 누적 사용량(Volume) 추이입니다. 면적이 넓을수록 병목이 심한 기구입니다.</div>", unsafe_allow_html=True)
         
-        # 누적 사용량을 직관적으로 보여주는 Area Chart 활용
         heatmap_data = pd.DataFrame({
             "파워 랙 (스쿼트)": [15, 30, 45, 55, 80, 100, 95, 85, 60],
             "트레드밀 (유산소)": [40, 50, 70, 65, 95, 90, 80, 75, 60],
@@ -456,6 +382,7 @@ def owner_app():
             ],
             "데이터 보유 기한": ["2028-12-31", "파기 대기", "2029-05-15", "2027-10-20", "2026-09-01", "2028-05-01", "2027-11-11", "파기 대기"]
         })
+        # 💡 피드백 반영: CSS 폰트 강제 적용으로 표 내부 글씨체 통일 완료
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
 # ==========================================
@@ -465,7 +392,7 @@ def main():
     inject_custom_css()
     
     if not st.session_state['logged_in']:
-        # 🔥 로그인 폼 (권한 2개로 축소 및 레이아웃 최적화)
+        # 🔥 로그인 폼
         st.markdown("<div class='hero-title'>FITPASS PRO</div>", unsafe_allow_html=True)
         st.markdown("<div class='hero-subtitle'>스마트 헬스장 데이터 솔루션</div>", unsafe_allow_html=True)
         
