@@ -11,7 +11,7 @@ if 'logged_in' not in st.session_state:
     st.session_state['role'] = None
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (폰트, 배경, 가독성 개선)
+# 🎨 다이내믹 커스텀 CSS (글자색, 탭 시인성 완벽 해결)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -98,74 +98,90 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
-        # 👟 회원 화면: 다크 & 인스타그램 감성 (가독성/대비 대폭 개선)
+        # 👟 회원 화면: 다크 & 인스타그램 감성 (가독성/대비 완벽 해결)
         st.markdown("""
         <style>
         .stApp {
-            /* 딥 슬레이트(네이비) 그라데이션으로 흰색 글씨 대비 강화 */
-            background-color: #0f172a; 
+            background-color: #0f172a !important; 
             background-image: 
                 radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), 
-                radial-gradient(at 100% 0%, #312e81 0, transparent 50%);
-            background-attachment: fixed;
+                radial-gradient(at 100% 0%, #312e81 0, transparent 50%) !important;
+            background-attachment: fixed !important;
         }
-        .insta-card {
-            background: rgba(255, 255, 255, 0.12); /* 투명도를 살짝 낮춰 배경과 분리 */
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-radius: 24px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.25); /* 테두리를 밝게 */
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
-            margin-bottom: 25px;
+        
+        /* 🚨 전체 글자색을 순백색으로 강제 덮어쓰기 (어두운 글자 완벽 해결) */
+        .stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
+        .stApp span, .stApp label, .stApp div, .stApp b, .stApp li {
+            color: #ffffff !important;
         }
-        /* 💡 카드 내부 모든 텍스트를 가장 밝은 흰색(#ffffff)으로 강제 적용 */
-        .insta-card h2, .insta-card h3, .insta-card p, .insta-card b, .insta-card div, .insta-card span, .stMarkdown p { 
-            color: #ffffff !important; 
-        }
+        
+        /* 예외: 네온 그라데이션 타이틀 */
         .insta-gradient-text {
             font-family: 'Montserrat', sans-serif !important;
-            background: linear-gradient(to right, #00f2fe, #4facfe);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 900;
-            font-size: 2.8rem;
-            margin-bottom: 15px;
-            text-align: center;
-            text-transform: uppercase;
+            background: linear-gradient(to right, #00f2fe, #4facfe) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            font-weight: 900 !important;
+            font-size: 2.8rem !important;
+            margin-bottom: 15px !important;
+            text-align: center !important;
+            text-transform: uppercase !important;
         }
-        .stButton>button { 
-            border-radius: 30px !important; 
-            font-weight: 800 !important;
-            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
-            color: #111 !important;
-            border: none !important;
+        
+        /* 프로필 카드(글래스모피즘) */
+        .profile-card {
+            background: rgba(255, 255, 255, 0.12) !important;
+            backdrop-filter: blur(16px) !important;
+            -webkit-backdrop-filter: blur(16px) !important;
+            border-radius: 24px !important;
+            padding: 25px !important;
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important;
+            margin-bottom: 25px !important;
         }
         
         /* 🔥 탭(Tab) 메뉴 가시성 극대화 */
         .stTabs [data-baseweb="tab-list"] {
-            background-color: rgba(255, 255, 255, 0.05); /* 탭 컨테이너 배경 */
-            border-radius: 12px;
-            padding: 5px;
-            gap: 8px;
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border-radius: 15px !important;
+            padding: 8px !important;
+            gap: 10px !important;
         }
-        .stTabs [data-baseweb="tab"] { 
-            color: #e2e8f0 !important; /* 선택 안된 탭도 아주 밝은 회색/흰색으로 */
-            font-weight: 700; 
-            font-size: 1.15rem !important; /* 탭 글자 크기 확대 */
-            padding: 10px 15px;
+        .stTabs [data-baseweb="tab"] p { 
+            color: #f8fafc !important; /* 선택 안된 탭도 밝은 흰색 유지 */
+            font-weight: 700 !important; 
+            font-size: 1.2rem !important; 
         }
         .stTabs [aria-selected="true"] { 
-            color: #ccff00 !important; /* 선택된 탭은 강렬한 네온 옐로우그린 */
-            background-color: rgba(255,255,255,0.1) !important; /* 선택된 탭 배경 하이라이트 */
-            border-radius: 8px;
+            background-color: rgba(204, 255, 0, 0.15) !important; /* 활성 탭 하이라이트 */
+            border-radius: 10px !important;
+            border: 1px solid rgba(204, 255, 0, 0.4) !important;
+        }
+        .stTabs [aria-selected="true"] p { 
+            color: #ccff00 !important; /* 활성 탭 글씨는 네온 옐로우 */
+            text-shadow: 0 0 10px rgba(204,255,0,0.5) !important;
         }
         
-        /* 셀렉트박스 & 체크박스 텍스트 가독성 */
-        .stSelectbox label, .stCheckbox label, .stNumberInput label { 
-            color: #ffffff !important; 
-            font-size: 1.1rem !important;
-            font-weight: 700 !important;
+        /* 알림(Info, Warning 등) 박스 다크테마 최적화 */
+        div[data-testid="stAlert"] {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        }
+        
+        /* 버튼 및 입력창 스타일 */
+        .stButton>button { 
+            border-radius: 30px !important; 
+            font-weight: 800 !important;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+            color: #111 !important; /* 버튼 글자는 검정색 */
+            border: none !important;
+            font-size: 1.2rem !important;
+            padding: 1.5rem !important;
+        }
+        .stSelectbox div[data-baseweb="select"] > div, .stNumberInput div[data-baseweb="input"] > div {
+            background-color: rgba(0,0,0,0.4) !important;
+            color: white !important;
+            border: 1px solid rgba(255,255,255,0.3) !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -202,13 +218,19 @@ def member_app():
     _, col_main, _ = st.columns([1, 2, 1])
     with col_main:
         st.markdown("<div class='insta-gradient-text'>Today's Fit</div>", unsafe_allow_html=True)
-        st.markdown("<div class='insta-card'><b>@soomin_workout</b>님, 오늘 하루도 득근하세요! 🔥<br>보유 포인트: 1,550 P</div>", unsafe_allow_html=True)
+        
+        # 글자색이 깨지지 않도록 독립된 프로필 카드로 구현
+        st.markdown("""
+        <div class='profile-card'>
+            <span style='font-size: 1.2rem;'><b>@soomin_workout</b>님, 오늘 하루도 득근하세요! 🔥</span><br><br>
+            <span style='color: #ccff00 !important; font-size: 1.1rem; font-weight: bold;'>보유 포인트: 1,550 P</span>
+        </div>
+        """, unsafe_allow_html=True)
         
         tab1, tab2, tab3, tab4 = st.tabs(["🚀 오늘의 추천", "📡 기구 태그(NFC)", "📈 과거 이력", "📸 오운완"])
         
         with tab1:
-            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
-            st.markdown("<h3>🤖 AI 맞춤 운동 처방</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='padding-top: 10px;'>🤖 AI 맞춤 운동 처방</h3>", unsafe_allow_html=True)
             st.info("💡 최근 2주간 하체 볼륨이 상체에 비해 40% 부족합니다. 오늘은 하체(대퇴사두) 중심 루틴을 제안합니다.")
             
             st.checkbox("워밍업: 스텝밀(천국의 계단) 10분")
@@ -216,13 +238,12 @@ def member_app():
             st.checkbox("메인 2: 레그 프레스 120kg x 12회 (3세트)")
             st.checkbox("마무리: 레그 익스텐션 40kg x 15회 (3세트)")
             
+            st.markdown("<br>", unsafe_allow_html=True)
             if st.button("💪 운동 시작하기 (워치 심박수 연동)", use_container_width=True):
                 st.toast("운동이 시작되었습니다! 부상에 주의하세요.")
-            st.markdown("</div>", unsafe_allow_html=True)
 
         with tab2:
-            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
-            st.markdown("<h3>📡 NFC 기구 스캔 (원터치 갱신)</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='padding-top: 10px;'>📡 NFC 기구 스캔 (원터치 갱신)</h3>", unsafe_allow_html=True)
             st.write("사용하실 기구에 스마트폰을 태그하세요.")
             
             machine_list = [
@@ -248,13 +269,13 @@ def member_app():
                         weight = st.number_input("중량 (kg)", value=50, step=5)
                     with col_r:
                         reps = st.number_input("반복 횟수", value=12, step=1)
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
                     if st.button("💪 이 기록으로 원터치 세트 완료", use_container_width=True):
                         st.toast(f"{machine} {weight}kg x {reps}회 기록 완료! 🔥 휴식 타이머(60초)가 시작됩니다.")
-            st.markdown("</div>", unsafe_allow_html=True)
             
         with tab3:
-            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
-            st.markdown("<h3>📈 나의 운동 과거 이력</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='padding-top: 10px;'>📈 나의 운동 과거 이력</h3>", unsafe_allow_html=True)
             st.write("점진적 과부하 그래프 및 최근 1개월 운동 로그입니다.")
             
             history_data = pd.DataFrame({
@@ -270,16 +291,15 @@ def member_app():
             st.line_chart(chart_data)
             
             st.markdown("**📋 상세 기록 로그**")
-            st.dataframe(history_data, hide_index=True, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.table(history_data)
 
         with tab4:
-            st.markdown("<div class='insta-card'>", unsafe_allow_html=True)
-            st.markdown("<h3>📸 나의 오운완 스토리</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='padding-top: 10px;'>📸 나의 오운완 스토리</h3>", unsafe_allow_html=True)
             st.image("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", caption="#오운완 #스마트헬스장 #득근")
             st.write("오늘 소모 칼로리: **450 kcal** | 누적 볼륨: **3,200 kg**")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
             st.button("인스타그램으로 바로 공유하기", use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 💻 점주/트레이너 (B2B) 대시보드
