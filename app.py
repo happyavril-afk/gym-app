@@ -217,7 +217,6 @@ def member_app():
                     if st.button("유산소 세션 시작", use_container_width=True):
                         st.toast("유산소 기록이 시작되었습니다.")
                 else:
-                    # 마찰 최소화(Friction Management): 이전 중량 자동 로드 (FRD 요구사항)
                     st.info(f"💡 최근 수행하신 {machine} 기록을 불러왔습니다. 오늘도 동일하게 진행할까요?")
                     col_w, col_r = st.columns(2)
                     with col_w:
@@ -258,14 +257,13 @@ def member_app():
             st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 💻 점주/트레이너 (B2B) 대시보드 (FRD 100% 반영)
+# 💻 점주/트레이너 (B2B) 대시보드 (FRD 100% 반영 및 풍부한 데모 데이터)
 # ==========================================
 def owner_app():
     is_owner = (st.session_state['role'] == 'OWNER')
     role_name = "총괄 점주(관장)" if is_owner else "트레이너(Sub-admin)"
     st.sidebar.markdown(f"**접속 계정:** {role_name}")
     
-    # FRD 요구사항: RBAC에 따른 메뉴 권한 분리[cite: 11]
     if is_owner:
         menu = st.sidebar.radio("📋 대시보드 메뉴", [
             "🚨 Epic 1. 이탈 위험 관리", 
@@ -278,87 +276,115 @@ def owner_app():
         menu = st.sidebar.radio("📋 대시보드 메뉴", ["🎯 내 담당 회원 관리", "💬 내 질문함 (응답 대기)"])
         st.sidebar.info("💡 Admin(점주) 권한 메뉴는 숨김 처리되었습니다.")
 
-    # [FRD 반영] Epic 1: 이탈 위험 신호 자동 감지 및 컨택[cite: 11]
+    # [FRD 반영] Epic 1: 이탈 위험 신호 자동 감지 및 컨택
     if menu == "🚨 Epic 1. 이탈 위험 관리":
         st.markdown("<h2>🚨 1-1. 이탈 위험 신호 자동 감지 보드</h2>", unsafe_allow_html=True)
-        st.markdown("<div class='corp-card'>14일 미방문(조건 A) 또는 최근 4주 대비 1주 방문 빈도가 50% 이상 급감(조건 B)한 회원 리스트입니다.<br>🚨 메인 대시보드 배지 알림: <b>오늘 관리가 필요한 이탈 위험 회원 (2명)</b></div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>14일 미방문(조건 A) 또는 방문 빈도가 50% 이상 급감(조건 B)한 회원 리스트입니다.<br>🚨 메인 대시보드 배지 알림: <b>오늘 관리가 필요한 이탈 위험 회원 (6명)</b></div>", unsafe_allow_html=True)
         
+        # 확장된 데모 데이터
         churn_df = pd.DataFrame({
-            "회원명": ["김철수", "박지민"],
-            "위험 사유": ["조건 A (15일 장기 미방문)", "조건 B (주 4회 ➔ 주 1회 급감)"],
-            "이탈 확률": ["88%", "75%"]
+            "회원명": ["김철수", "박지민", "이동국", "한소희", "마동석", "이지은"],
+            "위험 사유": [
+                "조건 A (18일 장기 미방문)", 
+                "조건 B (주 4회 ➔ 주 1회 급감)", 
+                "조건 A (24일 장기 미방문)", 
+                "조건 B (주 5회 ➔ 주 2회 하락)", 
+                "계약 만료 D-5 및 조건 A", 
+                "조건 A (14일 장기 미방문)"
+            ],
+            "이탈 확률(AI)": ["88%", "75%", "96%", "68%", "92%", "72%"],
+            "마지막 연락일": ["2주 전", "없음", "3주 전", "없음", "1주 전", "없음"]
         })
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
         
         st.markdown("<h2>✉️ 1-2. 원클릭 자동 컨택</h2>", unsafe_allow_html=True)
         if st.button("위험군 회원 전체 '복귀유도 맞춤 루틴 템플릿' 카카오 알림톡 전송"):
-            st.toast("메시지가 성공적으로 발송되었습니다.")
+            st.toast("6명의 회원에게 메시지가 성공적으로 발송되었습니다.")
 
-    # [FRD 반영] Epic 2: PT 타겟팅 (정체기) 및 목표 달성률[cite: 11]
+    # [FRD 반영] Epic 2: PT 타겟팅 (정체기) 및 목표 달성률
     elif menu == "🎯 Epic 2. PT 타겟팅 & 성장":
         st.markdown("<h2>🎯 2-1. 정체기 회원 타겟팅 (PT 영업 보드)</h2>", unsafe_allow_html=True)
         st.markdown("<div class='corp-card'>특정 주력 기구의 중량/횟수가 최근 3주 이상 갱신(PR)되지 않은 회원입니다. 원포인트 레슨 제안에 최적화되어 있습니다.</div>", unsafe_allow_html=True)
         
+        # 확장된 데모 데이터
         sales_df = pd.DataFrame({
-            "회원명": ["최운식", "정종현", "유재석"],
-            "정체 종목": ["벤치프레스 (가슴)", "스쿼트 (하체)", "데드리프트 (등)"],
-            "정체 기간": ["4주째 50kg", "3주째 80kg", "5주째 60kg"],
-            "수행률": [65, 40, 80] 
+            "회원명": ["최운식", "정종현", "유재석", "김종국", "송지효", "하동훈"],
+            "정체 종목": ["벤치프레스 (가슴)", "스쿼트 (하체)", "데드리프트 (등)", "숄더 프레스 (어깨)", "레그 프레스 (하체)", "랫풀다운 (등)"],
+            "정체 기간": ["4주째 50kg", "3주째 80kg", "5주째 60kg", "8주째 80kg", "3주째 100kg", "4주째 40kg"],
+            "수행률": [65, 40, 80, 95, 30, 55] 
         })
         
-        # 2-2. 목표 달성률 Progress Bar 시각화 반영[cite: 11]
         st.dataframe(
             sales_df,
             column_config={"수행률": st.column_config.ProgressColumn("운동계획 수행률(목표 달성)", min_value=0, max_value=100, format="%d%%")},
             hide_index=True, use_container_width=True
         )
-        if st.button("💪 정체기 회원 '원포인트 PT 제안' 푸시 발송"):
-            st.toast("영업 타겟팅 제안이 전송되었습니다.")
+        if st.button("💪 정체기 회원 '원포인트 PT 제안' 푸시 일괄 발송"):
+            st.toast("타겟팅된 회원들에게 영업 제안이 전송되었습니다.")
 
-    # [FRD 반영] Epic 3: 자동 축하 메시지 및 트레이너 응답 KPI[cite: 11]
+    # [FRD 반영] Epic 3: 자동 축하 메시지 및 트레이너 응답 KPI
     elif menu == "💬 Epic 3. 트레이너 KPI & 소통":
         st.markdown("<h2>💬 트레이너 소통 및 응답 대시보드</h2>", unsafe_allow_html=True)
         
         col1, col2 = st.columns(2)
         with col1:
-            st.markdown("<div class='corp-card'><b>🤖 3-1. 시스템 자동 웰컴/축하 메시지 (관장 명의)</b><br>신규 1주차 3회 출석 달성: 이번 주 12건 자동 발송<br>최초 10kg 증량 달성: 이번 주 5건 자동 발송</div>", unsafe_allow_html=True)
+            st.markdown("<div class='corp-card'><b>🤖 3-1. 시스템 자동 웰컴/축하 메시지 (관장 명의)</b><br>신규 1주차 3회 출석 달성: 이번 주 18건 자동 발송<br>최초 10kg 증량 달성: 이번 주 7건 자동 발송</div>", unsafe_allow_html=True)
         with col2:
             st.markdown("<div class='corp-card'><b>📊 3-2. 트레이너 응답 성과 지표 (KPI)</b><br>평균 질문 응답률: 92%<br>평균 응답 속도: 45분 (목표 KPI: 60분 이내 달성)</div>", unsafe_allow_html=True)
             
         st.subheader("미해결 회원 질문함")
+        # 확장된 데모 데이터
         qna_df = pd.DataFrame({
-            "회원명": ["박수민", "김민지"],
-            "질문 내용": ["벤치프레스 할 때 어깨가 결려요.", "인바디 쟀는데 체지방이 안 빠져요."],
-            "담당 트레이너": ["강태혁", "이국종"],
-            "대기 시간": ["45분", "2시간 10분 ⚠️"]
+            "회원명": ["박수민", "김민지", "이광수", "전소민", "지석진"],
+            "질문 내용": [
+                "벤치프레스 할 때 어깨가 결려요.", 
+                "인바디 쟀는데 체지방이 안 빠져요.", 
+                "무릎 수술 이력이 있는데 스쿼트 대체 운동 추천해주세요.", 
+                "닭가슴살 말고 단백질 보충제 먹어도 될까요?", 
+                "이번 주 일요일은 헬스장 오픈 안 하나요?"
+            ],
+            "담당 트레이너": ["강태혁", "이국종", "김종국", "강태혁", "안내데스크"],
+            "대기 시간": ["45분", "2시간 10분 ⚠️", "15분", "50분", "3시간 30분 🚨"]
         })
         st.dataframe(qna_df, hide_index=True, use_container_width=True)
 
-    # [FRD 반영] Epic 4: 히트맵 분석 및 오프피크 마케팅[cite: 11]
+    # [FRD 반영] Epic 4: 히트맵 분석 및 오프피크 마케팅
     elif menu == "🏢 Epic 4. 시설 및 오프피크":
         st.markdown("<h2>🏢 기구 혼잡도 히트맵 및 공간 최적화</h2>", unsafe_allow_html=True)
-        st.markdown("<div class='corp-card'>4-1. NFC 태그 타임스탬프 기반 기구별 하루 점유율(병목 시간대) 시각화입니다.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>4-1. NFC 태그 타임스탬프 기반 기구별 점유율(병목 시간대)을 분석합니다.</div>", unsafe_allow_html=True)
         
+        # 확장된 데모 데이터 (더 많은 기구와 디테일한 수치)
         heatmap_data = pd.DataFrame({
-            "파워 랙 (스쿼트)": [10, 20, 80, 100, 95, 50],
-            "랫풀다운": [30, 40, 60, 80, 70, 40]
-        }, index=["12:00", "14:00", "18:00", "19:00", "20:00", "22:00"])
+            "파워 랙 (스쿼트)": [15, 30, 45, 80, 100, 95, 60],
+            "트레드밀 (유산소)": [40, 50, 70, 95, 90, 80, 60],
+            "랫풀다운": [20, 35, 45, 75, 85, 70, 45],
+            "스미스 머신": [15, 25, 40, 70, 90, 85, 50],
+            "케이블 크로스오버": [25, 30, 50, 65, 80, 75, 40]
+        }, index=["09:00", "12:00", "15:00", "18:00", "19:00", "20:00", "22:00"])
+        
         st.line_chart(heatmap_data)
         
         st.markdown("<h2>📉 4-2. 오프피크(Off-peak) 타겟 마케팅</h2>", unsafe_allow_html=True)
-        if st.button("낮 시간대(14시~16시) 방문 이력 회원 대상 '오프피크 전용 쿠폰' 일괄 발송"):
+        if st.button("낮 시간대(12시~15시) 방문 이력 회원군 '오프피크 전용 쿠폰' 일괄 발송"):
             st.toast("한산한 시간대 방문을 유도하는 쿠폰이 발송되었습니다.")
 
-    # [FRD 반영] 시스템 필수 요구사항: 개인정보 동의 관리 (Privacy Compliance)[cite: 11]
+    # [FRD 반영] 시스템 필수 요구사항: 개인정보 동의 관리 (Privacy Compliance)
     elif menu == "🔒 개인정보 및 권한 설정":
         st.markdown("<h2>🔒 Privacy Compliance 및 동의 관리</h2>", unsafe_allow_html=True)
         st.markdown("<div class='corp-card'>회원의 개인정보 제공 동의 철회 시 시스템 상에서 민감 정보(체성분 등)가 즉각 마스킹(블라인드) 처리되어 법적 리스크를 차단합니다.</div>", unsafe_allow_html=True)
         
+        # 확장된 데모 데이터
         privacy_df = pd.DataFrame({
-            "회원명": ["김철수", "박지민 (철회)"],
-            "맞춤형 코칭 데이터 활용 동의": ["동의함", "동의 철회 🚫"],
-            "체중 / 체성분 데이터 열람": ["75.2kg / 골격근 35kg", "*** / *** (블라인드 처리)"],
-            "데이터 보유 기한": ["2028-12-31", "파기 대기"]
+            "회원명": ["김철수", "박지민 (철회)", "이지은", "마동석", "한소희 (만료)"],
+            "맞춤형 코칭 데이터 활용 동의": ["동의함", "동의 철회 🚫", "동의함", "동의함", "기간 만료 🚫"],
+            "체중 / 체성분 데이터 열람": [
+                "75.2kg / 골격근 35.1kg", 
+                "*** / *** (블라인드 처리)", 
+                "52.4kg / 체지방 21%", 
+                "105kg / 골격근 50kg", 
+                "*** / *** (자동 파기)"
+            ],
+            "데이터 보유 기한": ["2028-12-31", "파기 대기", "2029-05-15", "2027-10-20", "2026-09-01"]
         })
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
@@ -374,7 +400,7 @@ def main():
     inject_custom_css()
     
     if not st.session_state['logged_in']:
-        # 🔥 로그인 폼 (30대 남녀 배경 & 큰 버튼 적용)
+        # 🔥 로그인 폼
         st.markdown("<div class='hero-title'>FITPASS PRO</div>", unsafe_allow_html=True)
         st.markdown("<div class='hero-subtitle'>스마트 헬스장 데이터 솔루션</div>", unsafe_allow_html=True)
         
