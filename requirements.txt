@@ -1,2 +1,5 @@
 streamlit
 altair
+pandas
+numpy
+datetime
