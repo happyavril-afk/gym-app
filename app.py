@@ -26,7 +26,7 @@ if 'facility_db' not in st.session_state:
     ]
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (사이드바 글자색 버그 완벽 해결)
+# 🎨 다이내믹 커스텀 CSS
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -65,6 +65,23 @@ def inject_custom_css():
     [data-testid="stSidebar"] h3, [data-testid="stSidebar"] strong {
         color: #1e293b !important;
     }
+    
+    /* 🔥 4. 모바일 환경 사이드바 토글(열기/닫기) 버튼 가시성 극대화 */
+    [data-testid="collapsedControl"], [data-testid="stSidebarCollapsedControl"] {
+        background-color: #ccff00 !important;
+        border-radius: 50% !important;
+        margin: 10px !important;
+        box-shadow: 0 4px 15px rgba(204, 255, 0, 0.6) !important;
+        opacity: 1 !important;
+        z-index: 999999 !important;
+        transition: all 0.3s ease !important;
+    }
+    [data-testid="collapsedControl"] svg, [data-testid="stSidebarCollapsedControl"] svg {
+        color: #111111 !important;
+        fill: #111111 !important;
+        width: 24px !important;
+        height: 24px !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -78,10 +95,29 @@ def inject_custom_css():
             background-position: center;
             background-attachment: fixed;
         }
-        .hero-title { font-family: 'Montserrat', 'GmarketSans', sans-serif !important; font-size: 5.5rem; font-weight: 900; color: #ffffff; text-transform: uppercase; text-align: center; margin-top: 15vh; margin-bottom: 0px; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .hero-subtitle { font-size: 1.6rem; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 60px; text-shadow: 0 2px 10px rgba(204,255,0,0.3); }
-        .login-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
-        .stButton>button { border-radius: 30px !important; font-size: 1.6rem !important; font-weight: 900 !important; padding: 2.2rem 0 !important; background: transparent !important; border: 2px solid #ccff00 !important; color: #ccff00 !important; transition: all 0.3s ease !important; }
+        /* 💡 반응형 타이틀: 모바일에서 화면 크기에 맞춰 글자 크기 축소 및 줄바꿈 방지 */
+        .hero-title { 
+            font-family: 'Montserrat', 'GmarketSans', sans-serif !important; 
+            font-size: clamp(2.5rem, 10vw, 5.5rem) !important; 
+            font-weight: 900; 
+            color: #ffffff; 
+            text-transform: uppercase; 
+            text-align: center; 
+            margin-top: 15vh; 
+            margin-bottom: 0px; 
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5); 
+            white-space: nowrap; 
+        }
+        .hero-subtitle { 
+            font-size: clamp(1rem, 4vw, 1.6rem) !important; 
+            color: #ccff00; 
+            text-align: center; 
+            font-weight: 700; 
+            margin-bottom: 60px; 
+            text-shadow: 0 2px 10px rgba(204,255,0,0.3); 
+        }
+        .login-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: clamp(20px, 5vw, 40px); box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); }
+        .stButton>button { border-radius: 30px !important; font-size: clamp(1.2rem, 3.5vw, 1.6rem) !important; font-weight: 900 !important; padding: 1.5rem 0 !important; background: transparent !important; border: 2px solid #ccff00 !important; color: #ccff00 !important; transition: all 0.3s ease !important; }
         .stButton>button:hover { background: #ccff00 !important; color: #111 !important; box-shadow: 0 0 20px rgba(204,255,0,0.5) !important; transform: scale(1.03); }
         </style>
         """, unsafe_allow_html=True)
@@ -132,7 +168,7 @@ def member_app():
         "📈 과거 운동 이력", 
         "📸 오운완 스토리",
         "💬 1:1 질문함",
-        "🛠️ 시설 불편 신고" # 신규 메뉴 추가
+        "🛠️ 시설 불편 신고"
     ])
 
     _, col_main, _ = st.columns([1, 2, 1])
@@ -190,7 +226,6 @@ def member_app():
         elif menu == "📈 과거 운동 이력":
             st.markdown("<h3 style='padding-top: 10px;'>📈 과거 운동 이력</h3>", unsafe_allow_html=True)
             
-            # 💡 피드백 반영: 과거 이력 데이터 대폭 확장 (18개 세트)
             history_data = pd.DataFrame({
                 "날짜": ["07.10", "07.14", "07.18", "07.22", "07.28", "08.02", "08.05", "08.10", "08.15", "08.20", "08.25", "09.01", "09.05", "09.08", "09.12", "09.15", "09.18", "09.21"],
                 "운동 부위": ["가슴", "하체", "등", "어깨", "가슴", "하체", "등", "어깨", "가슴", "하체", "전신", "등", "가슴", "하체", "등", "어깨/팔", "가슴", "하체"],
@@ -199,7 +234,7 @@ def member_app():
             })
             
             chart_history = alt.Chart(history_data).mark_line(point=True, color='#00f2fe').encode(
-                x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)), # 데이터가 많아져서 살짝 꺾어 가독성 유지
+                x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)),
                 y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False)),
                 tooltip=['날짜', '운동 부위', '총 볼륨(kg)']
             ).properties(height=280)
@@ -249,7 +284,6 @@ def member_app():
                         else:
                             st.warning("답변을 준비 중입니다.")
 
-        # 💡 피드백 반영: 시설 불편 신고 (신규 에픽)
         elif menu == "🛠️ 시설 불편 신고":
             st.markdown("<h3 style='padding-top: 10px;'>🛠️ 시설 고장/불편 신고</h3>", unsafe_allow_html=True)
             st.write("안전하고 쾌적한 헬스장 이용을 위해 시설 문제를 알려주세요.")
@@ -299,7 +333,7 @@ def owner_app():
         "💬 Epic 3. AI 소통 & 회원 CS", 
         "🏢 Epic 4. 시설 혼잡도 분석",
         "🔒 Epic 5. 개인정보 동의 현황",
-        "🛠️ Epic 6. 시설 고장/불편 관리" # 신규 에픽 추가
+        "🛠️ Epic 6. 시설 고장/불편 관리"
     ])
 
     if menu == "🚨 Epic 1. 이탈 위험 관리":
@@ -457,7 +491,6 @@ def owner_app():
         })
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
-    # 💡 피드백 반영: 시설 고장/불편 관리 (신규 에픽)
     elif menu == "🛠️ Epic 6. 시설 고장/불편 관리":
         st.title("🛠️ 시설 고장 및 불편 신고 접수함")
         
