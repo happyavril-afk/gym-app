@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. 페이지 설정
 st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
-# 2. 세션 상태 초기화
+# 2. 세션 상태 초기화 (메시지, Q&A, 시설 관리 DB)
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
@@ -17,11 +17,16 @@ if 'qna_db' not in st.session_state:
     st.session_state['qna_db'] = [
         {"id": 1, "시간": "오늘 14:20", "회원명": "박수민", "유형": "🏋️ 운동/자세 피드백", "내용": "벤치프레스 할 때 오른쪽 어깨가 결려요. 바벨 위치 문제일까요?", "상태": "대기중", "답변": ""},
         {"id": 2, "시간": "오늘 13:05", "회원명": "김민지", "유형": "💳 회원권/PT 문의", "내용": "PT 10회 추가 결제하면 할인 혜택이 어떻게 되나요?", "상태": "대기중", "답변": ""},
-        {"id": 3, "시간": "어제 20:10", "회원명": "장도연", "유형": "🏢 시설 이용 문의", "내용": "여자 탈의실 3번 락커 문이 잘 안 닫힙니다. 확인 부탁드려요.", "상태": "답변완료", "답변": "불편을 드려 죄송합니다! 시설팀에 바로 전달하여 수리 완료했습니다."},
+    ]
+if 'facility_db' not in st.session_state:
+    st.session_state['facility_db'] = [
+        {"id": 1, "시간": "어제 18:30", "신고자": "김민지", "위치": "여자 탈의실", "내용": "3번 락커 문이 잘 안 닫힙니다.", "상태": "조치완료", "답변": "락커 잠금장치 수리 및 교체 완료했습니다."},
+        {"id": 2, "시간": "오늘 09:15", "신고자": "이동국", "위치": "프리웨이트존", "내용": "파워랙 A 인클라인 벤치 각도 조절 핀이 헐겁습니다.", "상태": "접수됨", "답변": ""},
+        {"id": 3, "시간": "오늘 11:40", "신고자": "박지민", "위치": "유산소존", "내용": "3번 러닝머신 벨트에서 소음이 심하게 납니다.", "상태": "조치중", "답변": "AS 기사님 호출 완료하였습니다. (내일 수리 예정)"}
     ]
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (아이콘 글자 겹침 완벽 해결)
+# 🎨 다이내믹 커스텀 CSS (사이드바 글자색 버그 완벽 해결)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -40,20 +45,25 @@ def inject_custom_css():
         font-style: normal;
     }
     
-    /* 🌟 1. 일반 텍스트 폰트 적용 (아이콘 보호를 위해 포괄적 태그 제외) */
+    /* 🌟 1. 폰트 강제 적용 */
     p, h1, h2, h3, h4, h5, h6, label, li, a, button, b, strong, svg text, canvas {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
     }
-    
-    /* 🌟 2. 표(DataFrame) 내부 폰트 적용 */
     [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td {
         font-family: 'GmarketSans', sans-serif !important;
     }
     
-    /* 🚨 3. 스트림릿 아이콘 폰트 강제 복구 (글자 겹침 현상 원천 차단) */
+    /* 🚨 2. 스트림릿 아이콘 폰트 강제 복구 */
     span.material-symbols-rounded, span.material-icons, .stIcon, [class*="st-icon"] {
         font-family: 'Material Symbols Rounded', 'Material Icons', sans-serif !important;
+    }
+    
+    /* 🚨 3. 사이드바(Sidebar) 텍스트 강제 다크 컬러 (가시성 해결) */
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span:not([class*="stIcon"]):not(.material-icons), 
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, 
+    [data-testid="stSidebar"] h3, [data-testid="stSidebar"] strong {
+        color: #1e293b !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -82,9 +92,11 @@ def inject_custom_css():
         <style>
         .stApp { background-color: #0f172a !important; background-image: radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), radial-gradient(at 100% 0%, #312e81 0, transparent 50%) !important; background-attachment: fixed !important; }
         
-        /* 회원 사이드 텍스트 컬러 화이트 강제 (아이콘 클래스 제외) */
-        .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
-        .stApp span:not([class*="stIcon"]):not(.material-icons), .stApp label, .stApp b, .stApp li, .stApp div[data-testid="stMarkdownContainer"] { color: #ffffff !important; }
+        /* 회원 메인 화면(stMain) 텍스트 컬러 화이트 강제 (사이드바 제외) */
+        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, 
+        [data-testid="stMain"] h4, [data-testid="stMain"] h5, [data-testid="stMain"] h6, 
+        [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons), [data-testid="stMain"] label, 
+        [data-testid="stMain"] b, [data-testid="stMain"] li { color: #ffffff !important; }
         
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.8rem !important; margin-bottom: 15px !important; text-align: center !important; text-transform: uppercase !important; }
         .profile-card { background: rgba(255, 255, 255, 0.12) !important; backdrop-filter: blur(16px) !important; -webkit-backdrop-filter: blur(16px) !important; border-radius: 24px !important; padding: 25px !important; border: 1px solid rgba(255, 255, 255, 0.25) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important; margin-bottom: 25px !important; }
@@ -110,7 +122,7 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 📱 회원 (MEMBER) 앱 화면 (사이드바 메뉴로 개편)
+# 📱 회원 (MEMBER) 앱 화면
 # ==========================================
 def member_app():
     st.sidebar.markdown(f"**👟 회원 (B2C) 내비게이션**")
@@ -119,7 +131,8 @@ def member_app():
         "📡 기구 스캔 (NFC)", 
         "📈 과거 운동 이력", 
         "📸 오운완 스토리",
-        "💬 1:1 질문함"
+        "💬 1:1 질문함",
+        "🛠️ 시설 불편 신고" # 신규 메뉴 추가
     ])
 
     _, col_main, _ = st.columns([1, 2, 1])
@@ -176,20 +189,22 @@ def member_app():
             
         elif menu == "📈 과거 운동 이력":
             st.markdown("<h3 style='padding-top: 10px;'>📈 과거 운동 이력</h3>", unsafe_allow_html=True)
+            
+            # 💡 피드백 반영: 과거 이력 데이터 대폭 확장 (18개 세트)
             history_data = pd.DataFrame({
-                "날짜": ["09.05", "09.08", "09.12", "09.15", "09.18", "09.21"],
-                "운동 부위": ["가슴", "하체", "등", "어깨/팔", "가슴", "하체"],
-                "주요 기구": ["벤치프레스", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스", "레그 프레스"],
-                "총 볼륨(kg)": [2400, 4200, 2100, 1500, 2800, 4800]
+                "날짜": ["07.10", "07.14", "07.18", "07.22", "07.28", "08.02", "08.05", "08.10", "08.15", "08.20", "08.25", "09.01", "09.05", "09.08", "09.12", "09.15", "09.18", "09.21"],
+                "운동 부위": ["가슴", "하체", "등", "어깨", "가슴", "하체", "등", "어깨", "가슴", "하체", "전신", "등", "가슴", "하체", "등", "어깨/팔", "가슴", "하체"],
+                "주요 기구": ["벤치프레스", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스", "레그 프레스", "시티드 로우", "밀리터리 프레스", "벤치프레스", "스쿼트", "케이블", "풀업", "벤치프레스", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스", "레그 프레스"],
+                "총 볼륨(kg)": [1800, 3200, 1900, 1200, 1950, 3400, 2050, 1300, 2100, 3600, 2500, 2100, 2400, 4200, 2100, 1500, 2800, 4800]
             })
             
             chart_history = alt.Chart(history_data).mark_line(point=True, color='#00f2fe').encode(
-                x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=0)),
+                x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)), # 데이터가 많아져서 살짝 꺾어 가독성 유지
                 y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False)),
-                tooltip=['날짜', '총 볼륨(kg)']
-            ).properties(height=250)
+                tooltip=['날짜', '운동 부위', '총 볼륨(kg)']
+            ).properties(height=280)
             st.altair_chart(chart_history, use_container_width=True)
-            st.dataframe(history_data, hide_index=True, use_container_width=True)
+            st.dataframe(history_data.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
 
         elif menu == "📸 오운완 스토리":
             st.markdown("<h3 style='padding-top: 10px;'>📸 나의 오운완 스토리</h3>", unsafe_allow_html=True)
@@ -202,11 +217,7 @@ def member_app():
             st.write("궁금한 점을 남겨주시면 관리자가 실시간으로 답변해 드립니다.")
             
             q_category = st.selectbox("문의 유형 선택", [
-                "🏋️ 운동/자세 피드백", 
-                "🏢 시설 이용 문의", 
-                "💳 회원권/PT 영업 문의", 
-                "⚙️ 앱/시스템 오류", 
-                "💡 기타"
+                "🏋️ 운동/자세 피드백", "💳 회원권/PT 영업 문의", "⚙️ 앱/시스템 오류", "💡 기타"
             ])
             q_text = st.text_area("질문 내용", placeholder="자세한 내용을 입력해주세요.")
             
@@ -238,6 +249,44 @@ def member_app():
                         else:
                             st.warning("답변을 준비 중입니다.")
 
+        # 💡 피드백 반영: 시설 불편 신고 (신규 에픽)
+        elif menu == "🛠️ 시설 불편 신고":
+            st.markdown("<h3 style='padding-top: 10px;'>🛠️ 시설 고장/불편 신고</h3>", unsafe_allow_html=True)
+            st.write("안전하고 쾌적한 헬스장 이용을 위해 시설 문제를 알려주세요.")
+            
+            f_location = st.selectbox("문제 발생 위치", [
+                "프리웨이트존 (랙, 벤치 등)", "머신존 (상/하체 기구)", "유산소존 (러닝머신, 사이클)", "탈의실/샤워실", "스트레칭존", "기타 구역"
+            ])
+            f_text = st.text_area("신고 내용", placeholder="예) 3번 러닝머신 벨트가 자꾸 헛돕니다. / A랙 바벨 원판 클립이 부족해요.")
+            
+            if st.button("신고 접수하기", use_container_width=True):
+                if f_text:
+                    new_f = {
+                        "id": len(st.session_state['facility_db']) + 1,
+                        "시간": "방금 전",
+                        "신고자": "박수민(본인)",
+                        "위치": f_location,
+                        "내용": f_text,
+                        "상태": "접수됨",
+                        "답변": ""
+                    }
+                    st.session_state['facility_db'].insert(0, new_f)
+                    st.toast("불편 사항이 접수되었습니다. 빠르게 조치하겠습니다!")
+                    st.rerun()
+                else:
+                    st.error("신고 내용을 입력해주세요.")
+            
+            st.markdown("---")
+            st.markdown("#### 나의 신고 내역")
+            for f in st.session_state['facility_db']:
+                if f['신고자'] in ["박수민", "박수민(본인)"]:
+                    with st.expander(f"[{f['상태']}] {f['위치']} - {f['시간']}"):
+                        st.write(f"**신고 내용:** {f['내용']}")
+                        if f['상태'] in ["조치중", "조치완료"]:
+                            st.info(f"**관리자 코멘트:**\n{f['답변']}")
+                        else:
+                            st.warning("관리자가 확인 중입니다.")
+
 # ==========================================
 # 💻 점주 (OWNER) B2B 대시보드
 # ==========================================
@@ -249,7 +298,8 @@ def owner_app():
         "🎯 Epic 2. PT 타겟팅 & 영업", 
         "💬 Epic 3. AI 소통 & 회원 CS", 
         "🏢 Epic 4. 시설 혼잡도 분석",
-        "🔒 Epic 5. 개인정보 동의 현황"
+        "🔒 Epic 5. 개인정보 동의 현황",
+        "🛠️ Epic 6. 시설 고장/불편 관리" # 신규 에픽 추가
     ])
 
     if menu == "🚨 Epic 1. 이탈 위험 관리":
@@ -406,6 +456,52 @@ def owner_app():
             "데이터 보유 기한": ["2028-12-31", "파기 대기", "2029-05-15", "2027-10-20", "2026-09-01"]
         })
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
+
+    # 💡 피드백 반영: 시설 고장/불편 관리 (신규 에픽)
+    elif menu == "🛠️ Epic 6. 시설 고장/불편 관리":
+        st.title("🛠️ 시설 고장 및 불편 신고 접수함")
+        
+        pending_f = sum(1 for f in st.session_state['facility_db'] if f['상태'] == '접수됨')
+        progress_f = sum(1 for f in st.session_state['facility_db'] if f['상태'] == '조치중')
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("신규 접수(대기)", f"{pending_f}건", "확인 요망" if pending_f > 0 else "0", delta_color="inverse")
+        col2.metric("조치 진행 중", f"{progress_f}건", "-")
+        col3.metric("이번 주 수리 완료", "5건", "안전 유지")
+
+        st.markdown("<div class='corp-card'>회원들이 앱을 통해 신고한 헬스장 기구 고장, 탈의실 불편 등의 민원을 실시간으로 확인하고 조치 상태를 업데이트하세요.</div>", unsafe_allow_html=True)
+        
+        f_tab1, f_tab2 = st.tabs([f"🚨 신규 접수 및 조치중 ({pending_f + progress_f})", "✅ 조치 완료 내역"])
+        
+        with f_tab1:
+            if pending_f + progress_f == 0:
+                st.info("현재 접수된 시설 불편 사항이 없습니다. 쾌적한 상태입니다!")
+                
+            for f in st.session_state['facility_db']:
+                if f['상태'] in ['접수됨', '조치중']:
+                    with st.expander(f"[{f['상태']}] {f['위치']} - {f['신고자']} ({f['시간']})", expanded=True):
+                        st.markdown(f"**신고 내용:** {f['내용']}")
+                        
+                        col_action, col_text = st.columns([1, 3])
+                        with col_action:
+                            new_status = st.selectbox("상태 변경", ["접수됨", "조치중", "조치완료"], index=["접수됨", "조치중", "조치완료"].index(f['상태']), key=f"status_{f['id']}")
+                        with col_text:
+                            reply_text = st.text_input("회원에게 전달할 조치 계획 또는 결과", value=f['답변'], key=f"f_reply_{f['id']}")
+                            
+                        if st.button("상태 저장 및 답변 전송", key=f"f_btn_{f['id']}", type="primary"):
+                            for db_f in st.session_state['facility_db']:
+                                if db_f['id'] == f['id']:
+                                    db_f['상태'] = new_status
+                                    db_f['답변'] = reply_text
+                            st.toast(f"{f['위치']} 민원 상태가 업데이트 되었습니다.")
+                            st.rerun()
+                            
+        with f_tab2:
+            for f in st.session_state['facility_db']:
+                if f['상태'] == '조치완료':
+                    with st.expander(f"[완료] {f['위치']} - {f['신고자']} ({f['시간']})"):
+                        st.markdown(f"**신고 내용:** {f['내용']}")
+                        st.markdown(f"<div class='reply-box'><b>최종 조치 결과:</b><br>{f['답변']}</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 🚀 메인 라우팅 (컨트롤 타워)
