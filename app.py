@@ -7,14 +7,13 @@ from datetime import datetime
 # 1. 페이지 설정
 st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
-# 2. 세션 상태 초기화 (메시지 이력 및 실시간 Q&A DB)
+# 2. 세션 상태 초기화
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
 if 'qna_db' not in st.session_state:
-    # 점주와 회원이 공유하는 가상 Q&A 데이터베이스 (층위 세분화 반영)
     st.session_state['qna_db'] = [
         {"id": 1, "시간": "오늘 14:20", "회원명": "박수민", "유형": "🏋️ 운동/자세 피드백", "내용": "벤치프레스 할 때 오른쪽 어깨가 결려요. 바벨 위치 문제일까요?", "상태": "대기중", "답변": ""},
         {"id": 2, "시간": "오늘 13:05", "회원명": "김민지", "유형": "💳 회원권/PT 문의", "내용": "PT 10회 추가 결제하면 할인 혜택이 어떻게 되나요?", "상태": "대기중", "답변": ""},
@@ -22,7 +21,7 @@ if 'qna_db' not in st.session_state:
     ]
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (표 내부 폰트 완벽 강제 적용)
+# 🎨 다이내믹 커스텀 CSS (아이콘 글자 겹침 완벽 해결)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -41,13 +40,14 @@ def inject_custom_css():
         font-style: normal;
     }
     
-    /* 🌟 기본 텍스트 및 표/그래프(SVG text) 내부 요소 폰트 강력하게 강제 적용 */
-    html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, 
+    /* 💡 핵심 수정: Material Icons 클래스를 제외하고 폰트 적용 (글자 겹침 해결) */
+    html, body, p, h1, h2, h3, h4, h5, h6, span, div:not([class*="stIcon"]):not(.material-icons), label, li, 
     svg text, canvas, .stDataFrame, .stDataFrame * {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
     }
     
+    /* 테이블 강제 폰트 적용 */
     [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td {
         font-family: 'GmarketSans', sans-serif !important;
     }
@@ -77,7 +77,10 @@ def inject_custom_css():
         st.markdown("""
         <style>
         .stApp { background-color: #0f172a !important; background-image: radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), radial-gradient(at 100% 0%, #312e81 0, transparent 50%) !important; background-attachment: fixed !important; }
-        .stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp span, .stApp label, .stApp div, .stApp b, .stApp li { color: #ffffff !important; }
+        /* 회원 사이드 텍스트 컬러 화이트 강제 (아이콘 클래스 제외) */
+        .stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
+        .stApp span:not([class*="stIcon"]):not(.material-icons), .stApp label, .stApp b, .stApp li { color: #ffffff !important; }
+        
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.8rem !important; margin-bottom: 15px !important; text-align: center !important; text-transform: uppercase !important; }
         .profile-card { background: rgba(255, 255, 255, 0.12) !important; backdrop-filter: blur(16px) !important; -webkit-backdrop-filter: blur(16px) !important; border-radius: 24px !important; padding: 25px !important; border: 1px solid rgba(255, 255, 255, 0.25) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important; margin-bottom: 25px !important; }
         .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.1) !important; border-radius: 15px !important; padding: 8px !important; gap: 8px !important; }
@@ -191,11 +194,7 @@ def member_app():
             st.write("궁금한 점을 남겨주시면 관리자가 실시간으로 답변해 드립니다.")
             
             q_category = st.selectbox("문의 유형 선택", [
-                "🏋️ 운동/자세 피드백", 
-                "🏢 시설 이용 문의", 
-                "💳 회원권/PT 영업 문의", 
-                "⚙️ 앱/시스템 오류", 
-                "💡 기타"
+                "🏋️ 운동/자세 피드백", "🏢 시설 이용 문의", "💳 회원권/PT 영업 문의", "⚙️ 앱/시스템 오류", "💡 기타"
             ])
             q_text = st.text_area("질문 내용", placeholder="자세한 내용을 입력해주세요.")
             
