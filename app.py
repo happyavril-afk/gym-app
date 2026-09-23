@@ -7,14 +7,13 @@ from datetime import datetime
 # 1. 페이지 설정
 st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
-# 2. 세션 상태 초기화 (메시지 이력 및 실시간 Q&A DB)
+# 2. 세션 상태 초기화
 if 'logged_in' not in st.session_state:
     st.session_state['logged_in'] = False
     st.session_state['role'] = None
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
 if 'qna_db' not in st.session_state:
-    # 점주와 회원이 공유하는 가상 Q&A 데이터베이스
     st.session_state['qna_db'] = [
         {"id": 1, "시간": "오늘 14:20", "회원명": "박수민", "유형": "🏋️ 운동/자세 피드백", "내용": "벤치프레스 할 때 오른쪽 어깨가 결려요. 바벨 위치 문제일까요?", "상태": "대기중", "답변": ""},
         {"id": 2, "시간": "오늘 13:05", "회원명": "김민지", "유형": "💳 회원권/PT 문의", "내용": "PT 10회 추가 결제하면 할인 혜택이 어떻게 되나요?", "상태": "대기중", "답변": ""},
@@ -22,7 +21,7 @@ if 'qna_db' not in st.session_state:
     ]
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS (아이콘 텍스트 겹침 완벽 해결)
+# 🎨 다이내믹 커스텀 CSS (아이콘 글자 겹침 완벽 해결)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -83,16 +82,12 @@ def inject_custom_css():
         <style>
         .stApp { background-color: #0f172a !important; background-image: radial-gradient(at 0% 0%, #1e1b4b 0, transparent 50%), radial-gradient(at 100% 0%, #312e81 0, transparent 50%) !important; background-attachment: fixed !important; }
         
-        /* 회원 사이드 텍스트 컬러 화이트 강제 */
+        /* 회원 사이드 텍스트 컬러 화이트 강제 (아이콘 클래스 제외) */
         .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, 
-        .stApp label, .stApp b, .stApp li, .stApp div[data-testid="stMarkdownContainer"] { color: #ffffff !important; }
+        .stApp span:not([class*="stIcon"]):not(.material-icons), .stApp label, .stApp b, .stApp li, .stApp div[data-testid="stMarkdownContainer"] { color: #ffffff !important; }
         
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.8rem !important; margin-bottom: 15px !important; text-align: center !important; text-transform: uppercase !important; }
         .profile-card { background: rgba(255, 255, 255, 0.12) !important; backdrop-filter: blur(16px) !important; -webkit-backdrop-filter: blur(16px) !important; border-radius: 24px !important; padding: 25px !important; border: 1px solid rgba(255, 255, 255, 0.25) !important; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4) !important; margin-bottom: 25px !important; }
-        .stTabs [data-baseweb="tab-list"] { background-color: rgba(255, 255, 255, 0.1) !important; border-radius: 15px !important; padding: 8px !important; gap: 8px !important; }
-        .stTabs [data-baseweb="tab"] p { color: #f8fafc !important; font-weight: 700 !important; font-size: 1.05rem !important; }
-        .stTabs [aria-selected="true"] { background-color: rgba(204, 255, 0, 0.15) !important; border-radius: 10px !important; border: 1px solid rgba(204, 255, 0, 0.4) !important; }
-        .stTabs [aria-selected="true"] p { color: #ccff00 !important; text-shadow: 0 0 10px rgba(204,255,0,0.5) !important; }
         div[data-testid="stAlert"] { background-color: rgba(255, 255, 255, 0.1) !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; }
         .stButton>button { border-radius: 30px !important; font-weight: 800 !important; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111 !important; border: none !important; font-size: 1.2rem !important; padding: 1.5rem !important; }
         .stSelectbox div[data-baseweb="select"] > div, .stNumberInput div[data-baseweb="input"] > div, .stTextArea textarea { background-color: rgba(0,0,0,0.4) !important; color: white !important; border: 1px solid rgba(255,255,255,0.3) !important; }
@@ -115,9 +110,18 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
 
 # ==========================================
-# 📱 회원 (MEMBER) 앱 화면
+# 📱 회원 (MEMBER) 앱 화면 (사이드바 메뉴로 개편)
 # ==========================================
 def member_app():
+    st.sidebar.markdown(f"**👟 회원 (B2C) 내비게이션**")
+    menu = st.sidebar.radio("📋 메뉴 선택", [
+        "🚀 오늘의 처방", 
+        "📡 기구 스캔 (NFC)", 
+        "📈 과거 운동 이력", 
+        "📸 오운완 스토리",
+        "💬 1:1 질문함"
+    ])
+
     _, col_main, _ = st.columns([1, 2, 1])
     with col_main:
         st.markdown("<div class='insta-gradient-text'>Today's Fit</div>", unsafe_allow_html=True)
@@ -129,9 +133,7 @@ def member_app():
         </div>
         """, unsafe_allow_html=True)
         
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚀 처방", "📡 태그", "📈 이력", "📸 오운완", "💬 질문"])
-        
-        with tab1:
+        if menu == "🚀 오늘의 처방":
             st.markdown("<h3 style='padding-top: 10px;'>🤖 AI 맞춤 운동 처방</h3>", unsafe_allow_html=True)
             st.info("💡 최근 2주간 하체 볼륨이 상체에 비해 40% 부족합니다. 오늘은 하체(대퇴사두) 중심 루틴을 제안합니다.")
             
@@ -144,7 +146,7 @@ def member_app():
             if st.button("💪 운동 시작하기 (워치 연동)", use_container_width=True):
                 st.toast("운동이 시작되었습니다! 부상에 주의하세요.")
 
-        with tab2:
+        elif menu == "📡 기구 스캔 (NFC)":
             st.markdown("<h3 style='padding-top: 10px;'>📡 NFC 기구 스캔 (원터치 갱신)</h3>", unsafe_allow_html=True)
             machine_list = [
                 "기구를 선택하세요 (태그 대기 중...)",
@@ -172,7 +174,7 @@ def member_app():
                     if st.button("💪 이 기록으로 원터치 세트 완료", use_container_width=True):
                         st.toast(f"{machine} 기록 완료! 🔥 휴식 타이머 시작.")
             
-        with tab3:
+        elif menu == "📈 과거 운동 이력":
             st.markdown("<h3 style='padding-top: 10px;'>📈 과거 운동 이력</h3>", unsafe_allow_html=True)
             history_data = pd.DataFrame({
                 "날짜": ["09.05", "09.08", "09.12", "09.15", "09.18", "09.21"],
@@ -189,13 +191,13 @@ def member_app():
             st.altair_chart(chart_history, use_container_width=True)
             st.dataframe(history_data, hide_index=True, use_container_width=True)
 
-        with tab4:
+        elif menu == "📸 오운완 스토리":
             st.markdown("<h3 style='padding-top: 10px;'>📸 나의 오운완 스토리</h3>", unsafe_allow_html=True)
             st.image("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", caption="#오운완")
             st.write("소모 칼로리: **450 kcal** | 누적 볼륨: **3,200 kg**")
             st.button("인스타그램 공유", use_container_width=True)
             
-        with tab5:
+        elif menu == "💬 1:1 질문함":
             st.markdown("<h3 style='padding-top: 10px;'>💬 1:1 질문함</h3>", unsafe_allow_html=True)
             st.write("궁금한 점을 남겨주시면 관리자가 실시간으로 답변해 드립니다.")
             
