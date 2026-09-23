@@ -4,7 +4,7 @@ import numpy as np
 import altair as alt
 from datetime import datetime
 
-# 1. 페이지 설정 (반드시 최상단에 위치)
+# 1. 페이지 설정
 st.set_page_config(page_title="스마트 헬스장 B2B2C", page_icon="⚡", layout="wide")
 
 # 2. 세션 상태 초기화 (메시지 이력 및 실시간 Q&A DB)
@@ -14,7 +14,7 @@ if 'logged_in' not in st.session_state:
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
 if 'qna_db' not in st.session_state:
-    # 점주와 회원이 공유하는 가상 Q&A 데이터베이스
+    # 점주와 회원이 공유하는 가상 Q&A 데이터베이스 (층위 세분화 반영)
     st.session_state['qna_db'] = [
         {"id": 1, "시간": "오늘 14:20", "회원명": "박수민", "유형": "🏋️ 운동/자세 피드백", "내용": "벤치프레스 할 때 오른쪽 어깨가 결려요. 바벨 위치 문제일까요?", "상태": "대기중", "답변": ""},
         {"id": 2, "시간": "오늘 13:05", "회원명": "김민지", "유형": "💳 회원권/PT 문의", "내용": "PT 10회 추가 결제하면 할인 혜택이 어떻게 되나요?", "상태": "대기중", "답변": ""},
@@ -22,7 +22,7 @@ if 'qna_db' not in st.session_state:
     ]
 
 # ==========================================
-# 🎨 다이내믹 커스텀 CSS
+# 🎨 다이내믹 커스텀 CSS (표 내부 폰트 완벽 강제 적용)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -41,11 +41,13 @@ def inject_custom_css():
         font-style: normal;
     }
     
+    /* 🌟 기본 텍스트 및 표/그래프(SVG text) 내부 요소 폰트 강력하게 강제 적용 */
     html, body, [class*="st-"], .stMarkdown, .stText, h1, h2, h3, h4, h5, h6, 
     svg text, canvas, .stDataFrame, .stDataFrame * {
         font-family: 'GmarketSans', 'Montserrat', sans-serif !important;
         letter-spacing: -0.5px;
     }
+    
     [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td {
         font-family: 'GmarketSans', sans-serif !important;
     }
@@ -118,7 +120,6 @@ def member_app():
         </div>
         """, unsafe_allow_html=True)
         
-        # 5개의 탭으로 확장 (질문함 추가)
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚀 처방", "📡 태그", "📈 이력", "📸 오운완", "💬 질문"])
         
         with tab1:
@@ -135,7 +136,7 @@ def member_app():
                 st.toast("운동이 시작되었습니다! 부상에 주의하세요.")
 
         with tab2:
-            st.markdown("<h3 style='padding-top: 10px;'>📡 NFC 기구 스캔</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='padding-top: 10px;'>📡 NFC 기구 스캔 (원터치 갱신)</h3>", unsafe_allow_html=True)
             machine_list = [
                 "기구를 선택하세요 (태그 대기 중...)",
                 "--- [ 프리웨이트 & 랙 ] ---", "파워 랙 (스쿼트/데드리프트)", "스미스 머신 (전신)", 
@@ -143,21 +144,24 @@ def member_app():
                 "--- [ 하체 머신 ] ---", "레그 프레스 (하체)", "레그 익스텐션 (앞허벅지)", 
                 "--- [ 유산소 ] ---", "트레드밀 (러닝머신)"
             ]
-            
             machine = st.selectbox("가상 NFC 태그 시뮬레이터:", machine_list)
             
             if machine != "기구를 선택하세요 (태그 대기 중...)" and not machine.startswith("---"):
                 st.success(f"✅ {machine} 인식 완료")
-                st.info(f"💡 최근 수행하신 {machine} 기록을 불러왔습니다.")
-                col_w, col_r = st.columns(2)
-                with col_w:
-                    weight = st.number_input("중량 (kg)", value=50, step=5)
-                with col_r:
-                    reps = st.number_input("반복 횟수", value=12, step=1)
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("💪 이 기록으로 원터치 세트 완료", use_container_width=True):
-                    st.toast(f"{machine} 기록 완료! 🔥 휴식 타이머 시작.")
+                if "유산소" in machine or "트레드밀" in machine:
+                    st.info("🏃 유산소 운동은 심박수와 소모 칼로리가 자동 기록됩니다.")
+                    if st.button("유산소 세션 시작", use_container_width=True):
+                        st.toast("유산소 기록이 시작되었습니다.")
+                else:
+                    st.info(f"💡 최근 수행하신 {machine} 기록을 불러왔습니다.")
+                    col_w, col_r = st.columns(2)
+                    with col_w:
+                        weight = st.number_input("중량 (kg)", value=50, step=5)
+                    with col_r:
+                        reps = st.number_input("반복 횟수", value=12, step=1)
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("💪 이 기록으로 원터치 세트 완료", use_container_width=True):
+                        st.toast(f"{machine} 기록 완료! 🔥 휴식 타이머 시작.")
             
         with tab3:
             st.markdown("<h3 style='padding-top: 10px;'>📈 과거 운동 이력</h3>", unsafe_allow_html=True)
@@ -183,10 +187,9 @@ def member_app():
             st.button("인스타그램 공유", use_container_width=True)
             
         with tab5:
-            st.markdown("<h3 style='padding-top: 10px;'>💬 트레이너 1:1 질문함</h3>", unsafe_allow_html=True)
-            st.write("궁금한 점을 카테고리에 맞춰 남겨주시면 담당 트레이너가 실시간으로 답변해 드립니다.")
+            st.markdown("<h3 style='padding-top: 10px;'>💬 1:1 질문함</h3>", unsafe_allow_html=True)
+            st.write("궁금한 점을 남겨주시면 관리자가 실시간으로 답변해 드립니다.")
             
-            # 카테고리 층위 세분화 반영
             q_category = st.selectbox("문의 유형 선택", [
                 "🏋️ 운동/자세 피드백", 
                 "🏢 시설 이용 문의", 
@@ -215,15 +218,14 @@ def member_app():
             
             st.markdown("---")
             st.markdown("#### 나의 문의 내역")
-            # 본인이 작성한 질문만 필터링해서 보여주기 (시뮬레이션상 모두 보여줌)
             for q in st.session_state['qna_db']:
                 if q['회원명'] in ["박수민", "박수민(본인)"]:
                     with st.expander(f"[{q['상태']}] {q['유형']} - {q['시간']}"):
                         st.write(f"**Q. {q['내용']}**")
                         if q['상태'] == "답변완료":
-                            st.info(f"**A. 트레이너 답변:**\n{q['답변']}")
+                            st.info(f"**A. 관리자 답변:**\n{q['답변']}")
                         else:
-                            st.warning("트레이너가 답변을 준비 중입니다.")
+                            st.warning("답변을 준비 중입니다.")
 
 # ==========================================
 # 💻 점주 (OWNER) B2B 대시보드
@@ -271,7 +273,7 @@ def owner_app():
             st.success("메시지가 성공적으로 발송되었습니다.")
             
         if st.session_state['msg_history']:
-            with st.expander("📝 최근 알림톡 발송 이력 보기", expanded=False):
+            with st.expander("📝 최근 발송 이력 보기", expanded=False):
                 st.dataframe(pd.DataFrame(st.session_state['msg_history']), hide_index=True, use_container_width=True)
 
     elif menu == "🎯 Epic 2. PT 타겟팅 & 영업":
@@ -301,7 +303,7 @@ def owner_app():
 
         st.markdown("<h3>🎟️ 원포인트 PT 쿠폰 맞춤 발송</h3>", unsafe_allow_html=True)
         target_members = st.multiselect("쿠폰 발송 대상을 선택하세요", sales_df['회원명'].tolist(), default=sales_df['회원명'].tolist())
-        pt_msg = st.text_area("쿠폰 발송 메시지 수정", "회원님, '무료 1:1 원포인트 레슨 쿠폰'을 보내드리니 트레이너 데스크로 편하게 문의주세요!")
+        pt_msg = st.text_area("쿠폰 발송 메시지 수정", "회원님, '무료 1:1 원포인트 레슨 쿠폰'을 보내드리니 데스크로 편하게 문의주세요!")
         
         if st.button("💪 선택한 회원에게 쿠폰 발송하기", type="primary"):
             if len(target_members) > 0:
@@ -310,23 +312,20 @@ def owner_app():
                 st.success(f"{len(target_members)}명의 회원에게 영업 제안이 전송되었습니다.")
                 
         if st.session_state['msg_history']:
-            with st.expander("📝 최근 알림톡 발송 이력 보기", expanded=False):
+            with st.expander("📝 최근 발송 이력 보기", expanded=False):
                 st.dataframe(pd.DataFrame(st.session_state['msg_history']), hide_index=True, use_container_width=True)
 
     elif menu == "💬 Epic 3. AI 소통 & 회원 CS":
         st.title("💬 실시간 회원 Q&A 및 소통 대시보드")
         
-        col1, col2, col3 = st.columns(3)
-        # 답변 대기중인 질문 수 카운트
         pending_count = sum(1 for q in st.session_state['qna_db'] if q['상태'] == '대기중')
-        
+        col1, col2, col3 = st.columns(3)
         col1.metric("이번 달 AI 자동 발송", "156건", "42건 🔺")
         col2.metric("미해결 CS 질문", f"{pending_count}건", "실시간 연동중")
         col3.metric("CS 평균 응답 시간", "25분", "-5분 🔻")
         
-        st.markdown("<div class='corp-card'><b>🙋‍♂️ 접수된 회원 질문함 (실시간)</b><br>유형별로 접수된 회원의 문의를 확인하고 즉시 답장을 발송할 수 있습니다.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'><b>🙋‍♂️ 접수된 회원 질문함 (실시간)</b><br>유형별로 접수된 문의를 확인하고 즉시 답장을 발송할 수 있습니다.</div>", unsafe_allow_html=True)
         
-        # 상태별로 탭 분리
         q_tab1, q_tab2 = st.tabs([f"🚨 대기중인 질문 ({pending_count})", "✅ 답변 완료 내역"])
         
         with q_tab1:
@@ -337,13 +336,10 @@ def owner_app():
                 if q['상태'] == '대기중':
                     with st.expander(f"[{q['유형']}] {q['회원명']} 회원님 - {q['시간']}", expanded=True):
                         st.markdown(f"**Q. {q['내용']}**")
-                        
-                        # 답장 폼 (고유 key 부여)
                         reply_text = st.text_area("답장 작성", key=f"reply_{q['id']}", placeholder="회원님께 전달할 답변을 작성해주세요.")
                         
-                        if st.button("답장 발송 및 상태 변경", key=f"btn_{q['id']}", type="primary"):
+                        if st.button("답장 발송", key=f"btn_{q['id']}", type="primary"):
                             if reply_text:
-                                # 해당 질문 상태 업데이트
                                 for db_q in st.session_state['qna_db']:
                                     if db_q['id'] == q['id']:
                                         db_q['상태'] = '답변완료'
@@ -358,7 +354,7 @@ def owner_app():
                 if q['상태'] == '답변완료':
                     with st.expander(f"[{q['유형']}] {q['회원명']} 회원님 - {q['시간']}"):
                         st.markdown(f"**Q. {q['내용']}**")
-                        st.markdown(f"<div class='reply-box'><b>A. 트레이너 답변:</b><br>{q['답변']}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='reply-box'><b>A. 관리자 답변:</b><br>{q['답변']}</div>", unsafe_allow_html=True)
 
     elif menu == "🏢 Epic 4. 시설 혼잡도 분석":
         st.title("🏢 기구 혼잡도(히트맵) 및 공간 최적화")
@@ -381,7 +377,7 @@ def owner_app():
         
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("📉 낮 시간대(13시~16시) 방문 이력 회원군 '오프피크 전용 혜택' 발송", use_container_width=True):
-            st.toast("한산한 시간대 방문을 유도하는 쿠폰이 성공적으로 발송되었습니다.")
+            st.toast("오프피크 방문 유도 쿠폰이 성공적으로 발송되었습니다.")
 
     elif menu == "🔒 Epic 5. 개인정보 동의 현황":
         st.title("🔒 Privacy Compliance 및 동의 관리")
