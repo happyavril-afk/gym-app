@@ -5,7 +5,7 @@ import altair as alt
 from datetime import datetime
 
 # ==========================================
-# 1. 💾 대규모 풍부한 시뮬레이션 데이터 로드 (DB 역할)
+# 1. 💾 대규모 풍부한 시뮬레이션 데이터 로드
 # ==========================================
 def load_mock_data():
     history_df = pd.DataFrame({
@@ -53,13 +53,14 @@ def load_mock_data():
         "파워 랙 (웨이트)": [5, 15, 25, 45, 80, 100, 95, 60],
         "트레드밀 (유산소)": [10, 40, 30, 65, 95, 90, 80, 60],
         "스미스 머신": [2, 10, 20, 35, 75, 85, 70, 45],
-        "스트레칭존": [5, 10, 15, 20, 40, 50, 45, 20]
+        "스트레칭존": [5, 10, 15, 20, 40, 50, 45, 20],
+        "케이블 머신": [8, 20, 35, 50, 85, 95, 80, 50]
     })
     
     return history_df, churn_df, vip_df, sales_df, heatmap_df
 
 # ==========================================
-# 2. 페이지 및 세션 상태 초기화 (전역 데이터)
+# 2. 페이지 및 세션 상태 초기화
 # ==========================================
 st.set_page_config(page_title="FITPASS PRO", page_icon="⚡", layout="wide")
 
@@ -81,11 +82,10 @@ if 'facility_db' not in st.session_state:
         {"id": 3, "시간": "어제 14:20", "신고자": "송지효", "위치": "유산소존", "내용": "3번 러닝머신 덜컹거림", "상태": "조치완료", "답변": "수평 조절 나사 재조정 완료했습니다."}
     ]
 
-# 데이터 로드
 history_df, churn_df, vip_df, sales_df, heatmap_df = load_mock_data()
 
 # ==========================================
-# 3. 🎨 다이내믹 커스텀 CSS (모바일 가시성 최적화)
+# 3. 🎨 다이내믹 커스텀 CSS
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -156,7 +156,6 @@ def member_app():
             st.markdown("### 📊 M02. 인바디 업로드 및 목표 설정")
             st.info("신규 회원의 인바디를 분석하고 주간 목표를 설정합니다.")
             st.file_uploader("인바디 결과지 (이미지/PDF) 업로드")
-            
             st.selectbox("🎯 최우선 운동 목표", ["근력 증가 (벌크업)", "체중 관리 (다이어트)", "운동 습관 만들기", "재활 및 체형 교정"])
             col1, col2 = st.columns(2)
             with col1: st.number_input("주당 희망 방문 횟수", min_value=1, max_value=7, value=4)
@@ -167,13 +166,11 @@ def member_app():
         elif menu == "🚀 2. 오늘의 처방 (Today's Fit)":
             st.markdown("### 🤖 M03. AI 트레이너 오늘의 루틴")
             st.success("🗣️ 트레이너: '지난번 레그프레스 10회를 훌륭히 소화하셨네요! 최근 하체 볼륨이 부족하니 오늘은 하체 위주로 가볼까요?'")
-            
             st.write("---")
             st.checkbox("🔥 워밍업: 스텝밀(천국의 계단) 10분")
             st.checkbox("💪 메인 1: 파워 랙(스쿼트) 80kg x 10회 (4세트) [직전 동일]")
             st.checkbox("💪 메인 2: 레그 프레스 120kg x 12회 (3세트)")
             st.checkbox("🧘 마무리: 레그 익스텐션 40kg x 15회 (3세트)")
-            
             st.markdown("<br>", unsafe_allow_html=True)
             col1, col2 = st.columns(2)
             with col1: st.button("루틴 건너뛰기 / 변경", use_container_width=True)
@@ -183,7 +180,6 @@ def member_app():
         elif menu == "📡 3. 기구 스캔 (NFC 기록)":
             st.markdown("### 📡 M06. NFC 태그 시뮬레이터")
             machine = st.selectbox("기구를 태그하세요:", ["기구 대기 중...", "파워 랙 (스쿼트)", "벤치프레스 머신", "랫풀다운", "트레드밀 (유산소)"])
-            
             if machine != "기구 대기 중...":
                 st.info(f"✅ {machine} 인식 완료")
                 if "유산소" in machine:
@@ -195,14 +191,12 @@ def member_app():
                     c1, c2 = st.columns(2)
                     with c1: weight = st.number_input("중량 (kg)", value=80, step=5)
                     with c2: reps = st.number_input("반복 횟수", value=10, step=1)
-                    
                     if st.button("🔊 카운트 시작 (M09A)", use_container_width=True): st.toast("하나! 둘! 잘하고 있어요!")
                     if st.button("💪 이 기록으로 원터치 세트 완료", type="primary", use_container_width=True): st.toast(f"{machine} 1세트 완료! ⏱️ 60초 휴식 타이머 시작.")
 
         elif menu == "📈 4. 주간 리포트 및 이력":
             st.markdown("### 🏆 M14. 주간 목표 진행률")
             st.progress(0.75, text="주간 방문 목표: 4회 중 3회 완료 (75%)")
-            
             st.markdown("### 📈 M16. 2개월간 총 볼륨 성장 추이")
             chart_history = alt.Chart(history_df).mark_line(point=True, color='#00f2fe').encode(
                 x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)),
@@ -210,10 +204,7 @@ def member_app():
                 tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
             ).properties(height=300)
             st.altair_chart(chart_history, use_container_width=True)
-            
-            with st.expander("📝 전체 기록 상세 보기"):
-                st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
-                
+            with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
             st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 15% 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
 
@@ -243,7 +234,7 @@ def owner_app():
         "🏆 Epic 2. 우수 회원 관리",
         "🎯 Epic 3. PT 영업 및 성장", 
         "💬 Epic 4. Q&A 및 소통", 
-        "🏢 Epic 5. 시설 혼잡도 분석",
+        "🏢 Epic 5. 기구별 혼잡도 분석",  # 💡 업데이트된 메뉴명
         "🔒 Epic 6. 개인정보 동의",
         "🛠️ Epic 7. 시설 민원 관리",
         "🎉 Epic 8. 이벤트 홍보",
@@ -265,31 +256,18 @@ def owner_app():
 
     elif menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
-        
-        st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(
-            x=alt.X('이탈 확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')),
-            y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')),
-            tooltip=['회원명', '위험 사유', '이탈 확률(%)']
-        ).properties(height=300), use_container_width=True)
-        
-        # matplotlib가 필요한 style.background_gradient 제거
+        st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(x=alt.X('이탈 확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')), y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')), tooltip=['회원명', '위험 사유', '이탈 확률(%)']).properties(height=300), use_container_width=True)
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
-        
         msg_template = st.text_area("맞춤형 복귀 유도 알림톡 템플릿", "회원님, 최근 방문이 뜸하시네요! 이번 주 오시면 혜택을 드립니다.")
         if st.button("일괄 자동 컨택 발송 (Epic 1-2)", type="primary"): st.toast("이탈 위험군 전체 메시지 발송 완료")
 
     elif menu == "🏆 Epic 2. 우수 회원 관리":
         st.title("🏆 Epic 2. 우수 회원 자동 선별")
-        st.write("주 3회 이상 출석 및 직전 8주 대비 볼륨 상승 회원을 선별합니다.")
-        
-        # matplotlib가 필요한 style.background_gradient 제거
         st.dataframe(vip_df, use_container_width=True, hide_index=True)
         if st.button("🎁 선택 회원 재등록 쿠폰/감사 메시지 발송", type="primary"): st.toast("VIP 혜택 발송 완료")
 
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
-        st.write("3주 이상 주력 기구 중량이 갱신되지 않은 회원을 분석합니다.")
-        
         st.dataframe(sales_df, column_config={"수행률(%)": st.column_config.ProgressColumn("수행률", min_value=0, max_value=100, format="%d%%")}, hide_index=True, use_container_width=True)
         if st.button("🎟️ 맞춤형 원포인트 PT 쿠폰 일괄 발송", type="primary"): st.toast("영업 쿠폰 발송 완료")
 
@@ -303,16 +281,41 @@ def owner_app():
                     if st.button("답장 발송", key=f"btn_{q['id']}", type="primary"):
                         q['상태'] = '답변완료'; q['답변'] = reply; st.rerun()
 
-    elif menu == "🏢 Epic 5. 시설 혼잡도 분석":
-        st.title("🏢 Epic 5. 시간대별 시설 점유율 차트")
-        df_melt = heatmap_df.melt('시간', var_name='기구', value_name='사용량')
-        st.altair_chart(alt.Chart(df_melt).mark_area(opacity=0.6).encode(
-            x=alt.X('시간:O', axis=alt.Axis(labelAngle=0)), 
-            y='사용량:Q', 
-            color='기구:N',
-            tooltip=['시간', '기구', '사용량']
-        ).properties(height=350), use_container_width=True)
-        if st.button("📉 낮 12~15시 오프피크 방문 유도 마케팅 발송"): st.toast("쿠폰 발송 완료")
+    # 💡 [업데이트] Epic 5. 기구별 혼잡도 선택 조회 기능 완벽 구현
+    elif menu == "🏢 Epic 5. 기구별 혼잡도 분석":
+        st.title("🏢 Epic 5. 기구별 맞춤 혼잡도 분석")
+        st.write("시간대별 기구 이용률을 확인하고 싶은 종목을 선택하세요.")
+        
+        # '시간' 컬럼을 제외한 순수 기구 목록 추출
+        machine_columns = [col for col in heatmap_df.columns if col != "시간"]
+        
+        # 1. 다중 선택 (Multi-select) UI 제공 (기본값: 상위 2개 기구)
+        selected_machines = st.multiselect(
+            "조회할 기구 선택:", 
+            options=machine_columns, 
+            default=["파워 랙 (웨이트)", "트레드밀 (유산소)"]
+        )
+        
+        if not selected_machines:
+            st.warning("조회할 기구를 최소 1개 이상 선택해주세요.")
+        else:
+            # 2. 선택한 기구만 필터링하여 데이터 변환 (Melt)
+            cols_to_keep = ["시간"] + selected_machines
+            filtered_df = heatmap_df[cols_to_keep]
+            df_melt = filtered_df.melt('시간', var_name='기구', value_name='사용량(%)')
+            
+            # 3. Area Chart 시각화 적용
+            chart = alt.Chart(df_melt).mark_area(opacity=0.6).encode(
+                x=alt.X('시간:O', axis=alt.Axis(labelAngle=0, title='시간대')), 
+                y=alt.Y('사용량(%):Q', stack=None, axis=alt.Axis(title='누적 점유율(%)')), 
+                color=alt.Color('기구:N', legend=alt.Legend(title="선택된 기구")),
+                tooltip=['시간', '기구', '사용량(%)']
+            ).properties(height=350)
+            st.altair_chart(chart, use_container_width=True)
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("📉 특정 시간대 방문 회원 '오프피크 마케팅' 일괄 발송", type="primary"): 
+            st.toast("오프피크 방문 유도 쿠폰이 발송되었습니다.")
 
     elif menu == "🔒 Epic 6. 개인정보 동의":
         st.title("🔒 Epic 6. 동의 철회 마스킹")
