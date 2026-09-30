@@ -7,9 +7,7 @@ from datetime import datetime
 # ==========================================
 # 1. 💾 대규모 풍부한 시뮬레이션 데이터 로드 (DB 역할)
 # ==========================================
-# 실제 서비스에서는 이 부분을 pd.read_csv("members.csv") 등으로 대체하면 됩니다.
 def load_mock_data():
-    # [B2C] 한 회원의 2개월 치 상세 운동 이력 (데이터 대폭 추가)
     history_df = pd.DataFrame({
         "날짜": ["07.01", "07.03", "07.05", "07.08", "07.10", "07.14", "07.18", "07.22", "07.25", "07.28", 
                  "08.02", "08.05", "08.10", "08.13", "08.15", "08.20", "08.22", "08.25", "08.28", "09.01", 
@@ -25,15 +23,13 @@ def load_mock_data():
                      2700, 2400, 3200, 2100, 1500, 2800, 2000, 3800]
     })
     
-    # [B2B] 이탈 위험 회원 리스트 (다양한 사유 추가)
     churn_df = pd.DataFrame({
         "회원명": ["김철수", "박지민", "이동국", "한소희", "마동석", "정우성", "이지은", "최우식"],
         "위험 사유": ["18일 미방문", "방문 주 4회➔1회", "24일 미방문", "PT 종료 후 미방문", "만료 D-5 & 미방문", "방문 시간대 불규칙", "최근 2주 볼륨 급감", "30일 장기 미방문"],
-        "이탈 확률": [88, 75, 96, 68, 92, 55, 62, 99],
+        "이탈 확률(%)": [88, 75, 96, 68, 92, 55, 62, 99],
         "회원권 잔여일": [45, 120, 12, 200, 5, 80, 150, 3]
     })
     
-    # [B2B] 우수 회원 (VIP) 리스트
     vip_df = pd.DataFrame({
         "회원명": ["이광수", "유재석", "송지효", "김종국", "하동훈", "양세찬"],
         "주 평균 방문": [4.5, 3.2, 5.1, 6.5, 3.8, 4.0],
@@ -42,7 +38,6 @@ def load_mock_data():
         "최근 응답": ["긍정적", "보통", "매우 긍정", "긍정적", "보통", "긍정적"]
     })
     
-    # [B2B] 정체기 회원 (영업 타겟) 리스트
     sales_df = pd.DataFrame({
         "회원명": ["최운식", "전소민", "조세호", "남창희", "김숙"],
         "정체 종목": ["스쿼트", "숄더 프레스", "데드리프트", "벤치프레스", "랫풀다운"],
@@ -52,7 +47,6 @@ def load_mock_data():
         "AI 추천 영업": ["자세 교정 제안", "보조 운동 제안", "하체 루틴 변경", "안전 보조", "그립 교정 레슨"]
     })
     
-    # [B2B] 일주일 치 시설 혼잡도 데이터 (히트맵용 풍부한 시계열)
     hours = ["06:00", "09:00", "12:00", "15:00", "18:00", "19:00", "20:00", "22:00"]
     heatmap_df = pd.DataFrame({
         "시간": hours,
@@ -273,12 +267,13 @@ def owner_app():
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
         
         st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(
-            x=alt.X('이탈 확률:Q', axis=alt.Axis(title='이탈 확률(%)')),
+            x=alt.X('이탈 확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')),
             y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')),
-            tooltip=['회원명', '위험 사유', '이탈 확률']
+            tooltip=['회원명', '위험 사유', '이탈 확률(%)']
         ).properties(height=300), use_container_width=True)
         
-        st.dataframe(churn_df.style.background_gradient(subset=['이탈 확률'], cmap='Reds'), use_container_width=True, hide_index=True)
+        # matplotlib가 필요한 style.background_gradient 제거
+        st.dataframe(churn_df, use_container_width=True, hide_index=True)
         
         msg_template = st.text_area("맞춤형 복귀 유도 알림톡 템플릿", "회원님, 최근 방문이 뜸하시네요! 이번 주 오시면 혜택을 드립니다.")
         if st.button("일괄 자동 컨택 발송 (Epic 1-2)", type="primary"): st.toast("이탈 위험군 전체 메시지 발송 완료")
@@ -287,7 +282,8 @@ def owner_app():
         st.title("🏆 Epic 2. 우수 회원 자동 선별")
         st.write("주 3회 이상 출석 및 직전 8주 대비 볼륨 상승 회원을 선별합니다.")
         
-        st.dataframe(vip_df.style.background_gradient(subset=['볼륨 증감률(%)'], cmap='Greens'), use_container_width=True, hide_index=True)
+        # matplotlib가 필요한 style.background_gradient 제거
+        st.dataframe(vip_df, use_container_width=True, hide_index=True)
         if st.button("🎁 선택 회원 재등록 쿠폰/감사 메시지 발송", type="primary"): st.toast("VIP 혜택 발송 완료")
 
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
