@@ -1,5 +1,1 @@
-streamlit
-altair
-pandas
-numpy
-datetime
+pip install streamlit pandas numpy altair
