@@ -10,14 +10,14 @@ from datetime import datetime
 # ==========================================
 SHEET_ID = "1Kf_FrZIoagIXkZIH1dO14fKPpgbLk85qDDM_r4zfno8"
 
-# 💡 업데이트된 시트 고유 번호(gid) 완벽 적용
+# 💡 최신 시트 고유 번호(gid)
 SHEET_URL_MEMBER_ANALYTICS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 SHEET_URL_WORKOUT_HISTORY  = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=991554144" 
 SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=347441251" 
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 시트 연동 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터
+# [안전장치] 폴백 데이터
 FALLBACK_DATA = {
     "member": "회원명,잔여일,주평균방문,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,45,1.2,-15,없음,0,88,이탈위험\n이광수,150,4.5,12,없음,0,5,VIP\n최운식,180,3.0,2,스쿼트,4,25,정체기",
     "workout": "날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n08.20,하체,레그 프레스,100,10,3,3000\n08.22,가슴,벤치프레스,60,12,4,2880",
@@ -30,14 +30,10 @@ FALLBACK_DATA = {
 def fetch_data(url, fallback_key):
     try:
         if "http" in url:
+            # 💡 구글 시트가 정상 표 형태이므로 단순하고 강력하게 읽어옴
             df = pd.read_csv(url)
-            # 콤마로 뭉쳐버렸을 때 자동 복구 (정규화 방탄 로직)
-            if len(df.columns) == 1 and ',' in df.columns[0]:
-                col_name = df.columns[0]
-                raw_text = col_name + '\n' + '\n'.join(df[col_name].astype(str).tolist())
-                df = pd.read_csv(io.StringIO(raw_text))
             
-            # 오타 자동 보정 로직
+            # 오타 자동 보정 로직 (시트에 혹시 남아있을 오타 대비)
             if '티겟분류' in df.columns:
                 df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
                 
@@ -73,7 +69,7 @@ if 'logged_in' not in st.session_state:
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
     
-# 에러 방지용 상태 초기화
+# 상태 초기화
 if 'qna_db' not in st.session_state:
     qna_records = df_qna_init.to_dict('records')
     for r in qna_records:
@@ -105,29 +101,13 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
-        # 🔥 메인 화면 반투명 영역 삭제 및 버튼 대폭 확대 UI 업데이트
         st.markdown("""
         <style>
         .stApp { background-image: linear-gradient(rgba(10, 10, 12, 0.55), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop'); background-size: cover; background-position: center; }
         .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(3rem, 12vw, 7rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; white-space: nowrap; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
         .hero-subtitle { font-size: clamp(1.2rem, 5vw, 2.2rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
-        
-        /* 반투명 박스 삭제 */
         .login-card { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
-        
-        /* 🚀 메인 버튼 크기 대폭 상향 */
-        .stButton>button { 
-            border-radius: 20px !important; 
-            font-size: clamp(1.4rem, 4vw, 2rem) !important; 
-            font-weight: 900 !important; 
-            padding: 2.5rem 1rem !important; 
-            border: 3px solid #ccff00 !important; 
-            color: #ccff00 !important; 
-            background: rgba(0, 0, 0, 0.6) !important; 
-            backdrop-filter: blur(5px);
-            transition: all 0.3s ease !important;
-            height: auto !important;
-        }
+        .stButton>button { border-radius: 20px !important; font-size: clamp(1.4rem, 4vw, 2rem) !important; font-weight: 900 !important; padding: 2.5rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.6) !important; backdrop-filter: blur(5px); transition: all 0.3s ease !important; height: auto !important; }
         .stButton>button:hover { background: #ccff00 !important; color: #111 !important; transform: scale(1.03); }
         </style>
         """, unsafe_allow_html=True)
@@ -217,14 +197,11 @@ def member_app():
             st.markdown("### 📈 M16. 누적 총 볼륨 성장 추이 (스프레드시트 연동)")
             
             if '날짜' in history_df.columns:
-                # 🔥 M16 차트 고도화 (그라데이션 영역, 곡선 라인, 네온 포인트 적용)
                 base = alt.Chart(history_df).encode(
                     x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45, title='날짜', grid=False)),
                     y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False), axis=alt.Axis(title='총 볼륨(kg)', grid=True, gridColor='rgba(255,255,255,0.1)')),
                     tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
                 )
-                
-                # 영역(그라데이션) + 곡선 라인 + 포인트 겹치기
                 area = base.mark_area(
                     color=alt.Gradient(
                         gradient='linear',
@@ -241,7 +218,7 @@ def member_app():
                 
                 with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
             else:
-                st.warning("데이터 분할 에러: 기록 탭을 찾을 수 없습니다.")
+                st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다.")
             
             st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
@@ -321,7 +298,6 @@ def owner_app():
 
     elif menu == "💬 Epic 4. Q&A 및 소통":
         st.title("💬 Epic 4. 1:1 질문함 실시간 연동")
-        # 🔥 에러 방지 고유 키(i) 반영
         for i, q in enumerate(st.session_state['qna_db']):
             if q.get('상태') == '대기중':
                 with st.expander(f"[대기중] {q.get('유형', '')} - {q.get('회원명', '')}", expanded=True):
@@ -360,7 +336,6 @@ def owner_app():
 
     elif menu == "🛠️ Epic 7. 시설 민원 관리":
         st.title("🛠️ Epic 7. 실시간 민원 트래킹")
-        # 🔥 에러 방지 고유 키(i) 완벽 반영 
         for i, f in enumerate(st.session_state['facility_db']):
             with st.expander(f"[{f.get('상태', '')}] {f.get('위치', '')} - {f.get('신고자', '')}"):
                 st.write(f"민원: {f.get('내용', '')}")
