@@ -16,10 +16,10 @@ SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 통신 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터 
+# [안전장치] 통신 실패 시 구동을 보장하는 예비(Fallback) 데이터 (회원명 포함)
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
-    "workout": "날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n08.20,하체,레그 프레스,100,10,3,3000\n08.22,가슴,벤치프레스,60,12,4,2880\n08.25,등,랫풀다운,45,15,3,2025\n08.28,하체,스쿼트,80,10,4,3200\n09.01,어깨,숄더 프레스,30,12,3,1080\n09.05,가슴,체스트 프레스,50,15,3,2250",
+    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
     "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
     "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋️ 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
     "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
@@ -30,12 +30,8 @@ def fetch_data(url, fallback_key):
     try:
         if "http" in url:
             df = pd.read_csv(url)
-            
-            # HTML 응답 방어
             if not df.empty and len(df.columns) > 0 and '<html' in str(df.columns[0]).lower():
                 raise ValueError("시트 접근 권한 제한됨")
-
-            # 콤마 뭉침 방어
             if len(df.columns) == 1 and ',' in df.columns[0]:
                 col_name = df.columns[0]
                 raw_text = col_name + '\n' + '\n'.join(df[col_name].astype(str).tolist())
@@ -43,16 +39,12 @@ def fetch_data(url, fallback_key):
             
             df.columns = df.columns.str.strip()
             df = df.dropna(how='all')
-            
             if '티겟분류' in df.columns:
                 df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
-                
             return df
     except Exception as e:
         print(f"Fetch Error [{fallback_key}]: {e}")
         pass
-    
-    # 예외 시 폴백 반환
     fallback_df = pd.read_csv(io.StringIO(FALLBACK_DATA[fallback_key]))
     fallback_df.columns = fallback_df.columns.str.strip()
     return fallback_df
@@ -83,7 +75,6 @@ if 'logged_in' not in st.session_state:
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
     
-# 상태 초기화
 if 'qna_db' not in st.session_state:
     qna_records = df_qna_init.to_dict('records')
     for r in qna_records:
@@ -159,10 +150,13 @@ def member_app():
         "💬 5. 소통 및 신고함"
     ])
 
+    # 💡 현재 로그인한 회원의 이름 (시연용 고정값)
+    current_user_name = "박수민"
+
     _, col_main, _ = st.columns([1, 2, 1])
     with col_main:
         st.markdown("<div class='insta-gradient-text'>FITPASS PRO</div>", unsafe_allow_html=True)
-        st.markdown("<div class='profile-card'><b>@soomin_workout</b>님, 오늘 하루도 득근하세요! 🔥<br><span style='color:#ccff00;'>보유 포인트: 1,550 P</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='profile-card'><b>@{current_user_name}_workout</b>님, 오늘 하루도 득근하세요! 🔥<br><span style='color:#ccff00;'>보유 포인트: 1,550 P</span></div>", unsafe_allow_html=True)
         
         if menu == "📊 1. 목표 및 체형 분석":
             st.markdown("### 📊 M02. 인바디 업로드 및 목표 설정")
@@ -208,55 +202,40 @@ def member_app():
         elif menu == "📈 4. 주간 리포트 및 이력":
             st.markdown("### 🏆 M14. 주간 목표 진행률")
             st.progress(0.75, text="주간 방문 목표: 4회 중 3회 완료 (75%)")
-            st.markdown("### 📈 M16. 누적 총 볼륨 성장 추이 (스프레드시트 연동)")
+            st.markdown("### 📈 M16. 나의 누적 볼륨 성장 추이")
             
-            if '날짜' in history_df.columns:
-                # 🔥 차트 다크 테마 완벽 동기화 및 시인성 극대화
-                base = alt.Chart(history_df).encode(
-                    x=alt.X('날짜:O', sort=None, axis=alt.Axis(
-                        labelAngle=-45, title='날짜', grid=False, 
-                        labelColor='white', titleColor='white' # X축 글자 화이트
-                    )),
-                    y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False), axis=alt.Axis(
-                        title='총 볼륨(kg)', grid=True, gridColor='rgba(255,255,255,0.2)', 
-                        labelColor='white', titleColor='white' # Y축 글자 화이트 및 은은한 그리드
-                    )),
-                    tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
-                )
+            # 🔥 핵심 로직: 수많은 기록 중 '로그인한 회원(본인)'의 기록만 필터링!
+            if '회원명' in history_df.columns and '날짜' in history_df.columns:
+                my_history_df = history_df[history_df['회원명'] == current_user_name].copy()
                 
-                area = base.mark_area(
-                    color=alt.Gradient(
-                        gradient='linear',
-                        stops=[alt.GradientStop(color='rgba(0, 242, 254, 0.6)', offset=0), 
-                               alt.GradientStop(color='rgba(0, 242, 254, 0.05)', offset=1)],
-                        x1=1, x2=1, y1=0, y2=1
+                if not my_history_df.empty:
+                    base = alt.Chart(my_history_df).encode(
+                        x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45, title='날짜', grid=False, labelColor='white', titleColor='white')),
+                        y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False), axis=alt.Axis(title='총 볼륨(kg)', grid=True, gridColor='rgba(255,255,255,0.2)', labelColor='white', titleColor='white')),
+                        tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
                     )
-                )
-                
-                line = base.mark_line(color='#00f2fe', strokeWidth=3, interpolate='monotone')
-                
-                # 점에 테두리(Stroke)를 주어 배경 묻힘 방지
-                points = base.mark_circle(color='#ccff00', size=70, opacity=1, stroke='white', strokeWidth=1)
-                
-                chart_history = (area + line + points).properties(
-                    height=350
-                ).configure(
-                    background='transparent' # 🔥 배경을 투명하게 날려 다크 CSS 테마와 일체화
-                ).configure_view(
-                    strokeWidth=0
-                ).configure_axis(
-                    domainColor='rgba(255,255,255,0.3)',
-                    tickColor='rgba(255,255,255,0.3)'
-                )
-                
-                # theme=None 을 명시하여 Streamlit 기본 화이트 테마 강제 해제
-                st.altair_chart(chart_history, use_container_width=True, theme=None) 
-                
-                with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
+                    area = base.mark_area(
+                        color=alt.Gradient(
+                            gradient='linear',
+                            stops=[alt.GradientStop(color='rgba(0, 242, 254, 0.6)', offset=0), 
+                                   alt.GradientStop(color='rgba(0, 242, 254, 0.05)', offset=1)],
+                            x1=1, x2=1, y1=0, y2=1
+                        )
+                    )
+                    line = base.mark_line(color='#00f2fe', strokeWidth=3, interpolate='monotone')
+                    points = base.mark_circle(color='#ccff00', size=70, opacity=1, stroke='white', strokeWidth=1)
+                    
+                    chart_history = (area + line + points).properties(height=350).configure(background='transparent').configure_view(strokeWidth=0).configure_axis(domainColor='rgba(255,255,255,0.3)', tickColor='rgba(255,255,255,0.3)')
+                    st.altair_chart(chart_history, use_container_width=True, theme=None)
+                    
+                    with st.expander("📝 전체 기록 상세 보기"): 
+                        st.dataframe(my_history_df.drop(columns=['회원명']).sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
+                else:
+                    st.info("아직 운동 기록이 없습니다. 오늘 첫 운동을 시작해 보세요!")
             else:
-                st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다. 권한을 확인해주세요.")
+                st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다.")
             
-            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 꾸준히 상승했습니다.'")
+            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
 
         elif menu == "💬 5. 소통 및 신고함":
@@ -265,20 +244,22 @@ def member_app():
                 q_cat = st.selectbox("유형", ["운동 피드백", "PT 문의", "기타"])
                 q_text = st.text_area("질문 내용")
                 if st.button("질문 전송"): 
-                    st.session_state['qna_db'].insert(0, {"id": len(st.session_state['qna_db'])+1, "시간": "방금전", "회원명": "박수민(본인)", "유형": q_cat, "내용": q_text, "상태": "대기중", "답변": ""})
+                    st.session_state['qna_db'].insert(0, {"id": len(st.session_state['qna_db'])+1, "시간": "방금전", "회원명": f"{current_user_name}(본인)", "유형": q_cat, "내용": q_text, "상태": "대기중", "답변": ""})
                     st.toast("접수 완료!")
                     st.rerun()
                 for i, q in enumerate(st.session_state['qna_db']):
-                    with st.expander(f"[{q.get('상태', '대기중')}] {q.get('유형', '')}"): st.write(f"Q: {q.get('내용', '')}\nA: {q.get('답변', '')}")
+                    if current_user_name in q.get('회원명', ''): # 본인 질문만 보기
+                        with st.expander(f"[{q.get('상태', '대기중')}] {q.get('유형', '')}"): st.write(f"Q: {q.get('내용', '')}\nA: {q.get('답변', '')}")
             with tab2:
                 f_loc = st.selectbox("위치", ["프리웨이트존", "유산소존", "탈의실"])
                 f_text = st.text_area("신고 내용")
                 if st.button("신고 전송"):
-                    st.session_state['facility_db'].insert(0, {"id": len(st.session_state['facility_db'])+1, "시간": "방금전", "신고자": "박수민(본인)", "위치": f_loc, "내용": f_text, "상태": "접수됨", "답변": ""})
+                    st.session_state['facility_db'].insert(0, {"id": len(st.session_state['facility_db'])+1, "시간": "방금전", "신고자": f"{current_user_name}(본인)", "위치": f_loc, "내용": f_text, "상태": "접수됨", "답변": ""})
                     st.toast("신고 접수 완료!")
                     st.rerun()
                 for i, f in enumerate(st.session_state['facility_db']):
-                    with st.expander(f"[{f.get('상태', '접수됨')}] {f.get('위치', '')}"): st.write(f"{f.get('내용', '')}\n(조치: {f.get('답변', '')})")
+                    if current_user_name in f.get('신고자', ''): # 본인 신고만 보기
+                        with st.expander(f"[{f.get('상태', '접수됨')}] {f.get('위치', '')}"): st.write(f"{f.get('내용', '')}\n(조치: {f.get('답변', '')})")
 
 # ==========================================
 # 5. 💻 점주 (OWNER) B2B 대시보드
@@ -331,6 +312,10 @@ def owner_app():
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
         st.dataframe(sales_df, hide_index=True, use_container_width=True)
         if st.button("🎟️ 맞춤형 원포인트 PT 쿠폰 일괄 발송", type="primary"): st.toast("영업 쿠폰 발송 완료")
+        
+        # 💡 B2B 메뉴에서 회원의 운동 이력 DB를 열람할 수 있는 기능 추가
+        st.markdown("<br><h4>📊 전체 회원 운동 로그 열람 (B2B 관리자용)</h4>", unsafe_allow_html=True)
+        st.dataframe(history_df.sort_values(by="날짜", ascending=False), height=200, use_container_width=True)
 
     elif menu == "💬 Epic 4. Q&A 및 소통":
         st.title("💬 Epic 4. 1:1 질문함 실시간 연동")
