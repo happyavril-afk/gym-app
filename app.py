@@ -184,7 +184,6 @@ def member_app():
         elif menu == "📡 3. 기구 스캔 (NFC 기록)":
             st.markdown("### 📡 M06. NFC 태그 시뮬레이터")
             
-            # 🔥 시각적인 아이콘 추가로 직관성 극대화
             machine_options = [
                 "📱 기구 대기 중 (태그해주세요)...", 
                 "🏋️ 파워 랙 (스쿼트/하체)", 
@@ -195,7 +194,6 @@ def member_app():
             machine = st.selectbox("가상 NFC 태그 시뮬레이터:", machine_options)
             
             if machine != "📱 기구 대기 중 (태그해주세요)...":
-                # 🔥 기구별 대표 이미지 매핑 (디자인 시인성 향상)
                 if "파워 랙" in machine:
                     st.image("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", use_container_width=True)
                 elif "벤치프레스" in machine:
@@ -347,8 +345,19 @@ def owner_app():
     elif menu == "🏢 Epic 5. 기구별 혼잡도 분석":
         st.title("🏢 Epic 5. 기구별 맞춤 혼잡도 분석")
         st.write("구글 스프레드시트의 시간대별 점유율 데이터를 기반으로 시각화합니다.")
+        
         machine_columns = [col for col in heatmap_df.columns if col != "시간"]
-        selected_machines = st.multiselect("조회할 기구 선택:", options=machine_columns, default=["파워 랙 (웨이트)", "트레드밀 (유산소)"] if len(machine_columns) > 1 else machine_columns)
+        
+        # 🔥 에러 완전 방어: 기본값을 동적으로 할당
+        preferred_defaults = ["파워 랙 (웨이트)", "트레드밀 (유산소)"]
+        valid_defaults = [m for m in preferred_defaults if m in machine_columns]
+        
+        # 만약 시트 컬럼 이름이 바뀌어서 valid_defaults가 비어있다면, 있는 기구 중 처음 2개를 선택
+        if not valid_defaults and len(machine_columns) > 0:
+            valid_defaults = machine_columns[:min(2, len(machine_columns))]
+            
+        selected_machines = st.multiselect("조회할 기구 선택:", options=machine_columns, default=valid_defaults)
+        
         if not selected_machines:
             st.warning("조회할 기구를 최소 1개 이상 선택해주세요.")
         elif '시간' in heatmap_df.columns:
