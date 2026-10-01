@@ -5,6 +5,54 @@ import altair as alt
 import io
 import time
 from datetime import datetime
+import google.generativeai as genai
+
+# ==========================================
+# 0. 🤖 Gemini AI 안전 설정 (Github 경고 우회)
+# ==========================================
+# 코드에 직접 키를 넣지 않고, 세션 상태에 저장하여 안전하게 사용합니다.
+if 'gemini_api_key' not in st.session_state:
+    st.session_state['gemini_api_key'] = ""
+if 'ai_model' not in st.session_state:
+    st.session_state['ai_model'] = None
+
+def init_ai(api_key):
+    try:
+        genai.configure(api_key=api_key)
+        st.session_state['ai_model'] = genai.GenerativeModel('gemini-1.5-flash')
+        return True
+    except:
+        st.session_state['ai_model'] = None
+        return False
+
+@st.cache_data(ttl=3600) 
+def get_ai_greeting(user_name, routine_info, api_key):
+    if not api_key: return f"🗣 AI 트레이너: '{user_name}님, 지난번 기록이 아주 좋았어요! 오늘도 힘차게 시작해볼까요?'"
+    
+    # 캐시 함수 내에서 모델을 일회성으로 초기화하여 사용
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    prompt = f"너는 친절하고 전문적인 헬스장 AI 트레이너야. 회원이름은 '{user_name}'이고, 오늘 할 주요 운동은 '{routine_info}'야. 이 회원에게 오늘 운동을 격려하는 2문장의 짧고 경쾌한 인사말을 작성해줘. 이모지도 하나 써줘."
+    try:
+        response = model.generate_content(prompt)
+        return f"🗣 AI 트레이너: '{response.text.strip()}'"
+    except:
+        return f"🗣 AI 트레이너: '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
+
+@st.cache_data(ttl=3600)
+def get_ai_workout_feedback(user_name, total_sets, total_vol, api_key):
+    if not api_key: return f"🗣 트레이너: '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
+    
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    prompt = f"너는 AI 트레이너야. '{user_name}' 회원이 방금 운동을 마쳤어. 오늘 총 {total_sets}세트를 수행했고, 총 볼륨은 {total_vol}kg이야. 수고했다는 칭찬과 함께 다음 운동을 기대하게 만드는 짧은 피드백 2문장을 써줘."
+    try:
+        response = model.generate_content(prompt)
+        return f"🗣 AI 트레이너: '{response.text.strip()}'"
+    except:
+        return f"🗣 AI 트레이너: '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
 
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
@@ -82,13 +130,27 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-def reset_routine():
-    st.session_state['my_routine'] = [
+ROUTINE_DB = {
+    "박수민": [
         {"id": 0, "부위": "워밍업", "기구": "트레드밀", "목표": "10분", "완료": False, "상태": "대기"},
-        {"id": 1, "부위": "하체", "기구": "스쿼트", "목표": "80kg x 10회", "세트": 4, "완료": False, "상태": "대기"},
-        {"id": 2, "부위": "하체", "기구": "레그 프레스", "목표": "120kg x 12회", "세트": 3, "완료": False, "상태": "대기"}
+        {"id": 1, "부위": "하체", "기구": "스쿼트", "목표": "80kg x 10회", "완료": False, "상태": "대기"},
+        {"id": 2, "부위": "하체", "기구": "레그 프레스", "목표": "120kg x 12회", "완료": False, "상태": "대기"}
+    ],
+    "최운식": [
+        {"id": 0, "부위": "워밍업", "기구": "사이클", "목표": "15분", "완료": False, "상태": "대기"},
+        {"id": 1, "부위": "가슴", "기구": "벤치프레스", "목표": "75kg x 10회", "완료": False, "상태": "대기"},
+        {"id": 2, "부위": "가슴", "기구": "인클라인 벤치", "목표": "50kg x 12회", "완료": False, "상태": "대기"}
     ]
-if 'my_routine' not in st.session_state: reset_routine()
+}
+
+def reset_routine(user_name):
+    import copy
+    if user_name in ROUTINE_DB:
+        st.session_state['my_routine'] = copy.deepcopy(ROUTINE_DB[user_name])
+    else:
+        st.session_state['my_routine'] = copy.deepcopy(ROUTINE_DB["박수민"])
+
+if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
 
 # ==========================================
 # 3. 🎨 커스텀 CSS (완벽한 시인성 & Hover 액션 보완)
@@ -99,93 +161,51 @@ def inject_custom_css():
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff'); font-weight: 500; }
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff'); font-weight: 700; }
-    
     p, h1, h2, h3, h4, h5, h6, label, li, a, button, svg text, canvas { font-family: 'GmarketSans', 'Montserrat', sans-serif !important; letter-spacing: -0.5px; }
     [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td { font-family: 'GmarketSans', sans-serif !important; }
-    
-    /* 사이드바 글자색 강제 고정 */
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #1e293b !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    # ------------------ 로그인(메인) 화면 ------------------
     if not st.session_state['logged_in']:
         st.markdown("""
         <style>
         .stApp { background-image: linear-gradient(rgba(10,10,12,0.6), rgba(10,10,12,0.8)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070'); background-size: cover; background-position: center; }
         .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(4rem, 10vw, 8rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
         .hero-subtitle { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
-        
-        /* 🔥 로그인 버튼: 크기 확대, 반투명 검정 배경, 글자색 고정형 Hover 애니메이션 */
-        .stButton>button { 
-            border-radius: 20px !important; 
-            font-size: clamp(1.5rem, 3vw, 2.5rem) !important; 
-            font-weight: 900 !important; 
-            padding: 2rem 1rem !important; 
-            border: 3px solid #ccff00 !important; 
-            color: #ccff00 !important; 
-            background: rgba(0, 0, 0, 0.7) !important; 
-            backdrop-filter: blur(10px); 
-            height: auto !important; 
-            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s !important;
-        }
-        .stButton>button:hover { 
-            background-color: rgba(204, 255, 0, 0.15) !important; 
-            transform: translateY(-5px); 
-            color: #ccff00 !important; 
-            box-shadow: 0 10px 20px rgba(204,255,0,0.3) !important;
-        }
+        .stButton>button { border-radius: 20px !important; font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 900 !important; padding: 2rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(10px); height: auto !important; transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s !important; }
+        .stButton>button:hover { background-color: rgba(204, 255, 0, 0.15) !important; transform: translateY(-5px); color: #ccff00 !important; box-shadow: 0 10px 20px rgba(204,255,0,0.3) !important; }
         .stButton>button:active { color: #ccff00 !important; }
         </style>
         """, unsafe_allow_html=True)
 
-    # ------------------ 회원(MEMBER) 화면 ------------------
     elif st.session_state['role'] == 'MEMBER':
         st.markdown("""
         <style>
         .stApp { background-color: #0f172a !important; }
-        
-        /* 🔥 바탕색 대비 모든 텍스트 완전 화이트로 강제 고정 */
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #ffffff !important; }
-        
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
         .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: #ffffff !important;}
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        
-        /* 🔥 B2C Primary 버튼 (파란색 그라데이션) */
         button[kind="primary"] { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
         button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4) !important; color: #111111 !important; }
         button[kind="primary"]:active { color: #111111 !important; }
-        
-        /* 🔥 B2C Secondary 버튼 (건너뛰기/변경 등) - 흰색 테두리와 어두운 배경 */
         button[kind="secondary"] { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
         button[kind="secondary"]:hover { transform: translateY(-2px); background-color: rgba(0, 242, 254, 0.2) !important; border-color: #00f2fe !important; color: #ffffff !important; }
         button[kind="secondary"]:active { color: #ffffff !important; }
-        button[kind="secondary"]:focus { color: #ffffff !important; }
         </style>
         """, unsafe_allow_html=True)
         
-    # ------------------ 점주(OWNER) 화면 ------------------
     elif st.session_state['role'] == 'OWNER':
         st.markdown("""
         <style>
         .stApp { background-color: #F4F7F9 !important; }
-        
-        /* 🔥 바탕색 대비 모든 텍스트 진한 네이비색으로 강제 고정 */
-        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #1e293b !important; }
-        
+        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] span, [data-testid="stMain"] label { color: #1e293b !important; }
         .corp-card { background-color: #ffffff !important; border-radius: 12px; padding: 20px; border-left: 5px solid #2563EB; margin-bottom: 20px; color: #1e293b !important;}
-        
-        /* 🔥 B2B Primary 버튼 (짙은 파란색) */
-        button[kind="primary"] { background-color: #2563EB !important; color: #ffffff !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+        button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
         button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3) !important; color: #ffffff !important; }
-        button[kind="primary"]:active { color: #ffffff !important; }
-        
-        /* 🔥 B2B Secondary 버튼 (토글 등) - 하얀색 배경 */
         button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
         button[kind="secondary"]:hover { transform: translateY(-2px); background-color: #eff6ff !important; border-color: #2563EB !important; color: #1e293b !important; }
-        button[kind="secondary"]:active { color: #1e293b !important; }
-        button[kind="secondary"]:focus { color: #1e293b !important; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -194,6 +214,17 @@ def inject_custom_css():
 # ==========================================
 def member_app():
     st.sidebar.markdown("**👟 회원 (B2C) 제어판**")
+    
+    # 🔥 [보안 패치] 사이드바에 API 키 입력창 배치 (Github 업로드 방지용)
+    with st.sidebar.expander("⚙️ AI 설정 (관리자용)"):
+        input_key = st.text_input("Gemini API Key 입력", value=st.session_state['gemini_api_key'], type="password")
+        if st.button("API 연동 확인"):
+            if input_key:
+                st.session_state['gemini_api_key'] = input_key
+                st.success("✅ 키가 세션에 임시 저장되었습니다.")
+            else:
+                st.warning("키를 입력해주세요.")
+
     all_members = df_members['회원명'].tolist() if not df_members.empty else ["박수민", "이광수", "전소민", "최운식"]
     if "박수민" not in all_members: all_members.insert(0, "박수민")
     
@@ -204,7 +235,7 @@ def member_app():
         st.session_state['current_user'] = selected_user
         st.session_state['workout_state'] = "준비"
         st.session_state['today_records'] = []
-        reset_routine()
+        reset_routine(selected_user)
         st.rerun()
 
     current_user_name = st.session_state['current_user']
@@ -248,7 +279,11 @@ def member_app():
             if not st.session_state.get('ai_mode', True):
                 st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
-                st.success(f"🗣 AI 트레이너: '{current_user_name}님, 지난번 스쿼트 기록이 아주 좋았어요! 오늘은 하체 볼륨을 조금 더 늘려볼까요?'")
+                # 🔥 진짜 AI 기반 다이내믹 텍스트 생성 연동
+                routine_info = ", ".join([r.get('기구', '') for r in st.session_state['my_routine']])
+                ai_msg = get_ai_greeting(current_user_name, routine_info, st.session_state['gemini_api_key'])
+                st.success(ai_msg)
+                
                 st.write("---")
                 
                 completed_count = sum(1 for r in st.session_state['my_routine'] if r.get('완료', False))
@@ -338,12 +373,15 @@ def member_app():
                         st.rerun()
 
         elif menu == "📈 4. 리포트 및 오운완(종료)":
+            
             if st.session_state['workout_state'] == "완료":
                 st.markdown("### 📸 M18. 오운완 (오늘 운동 완료)")
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
-                st.info(f"🗣 트레이너: '{current_user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 수행하셨네요.'")
+                # 🔥 진짜 AI 기반 운동 결과 피드백 생성
+                ai_fb = get_ai_workout_feedback(current_user_name, total_sets, total_vol, st.session_state['gemini_api_key'])
+                st.info(ai_fb)
                 
                 card_html = f"""
                 <div class='owoonwan-card'>
@@ -384,7 +422,7 @@ def member_app():
                 else: st.info("기록이 없습니다.")
 
         elif menu == "💬 5. 소통 및 설정함":
-            tab1, tab2, tab3 = st.tabs(["💬 M21. 1:1 질문", "🛠️ M20. 시설 신고", "⚙️ M22. 환경설정"])
+            tab1, tab2, tab3 = st.tabs(["💬 M21. 1:1 질문", "🛠️️ M20. 시설 신고", "⚙️ M22. 환경설정"])
             with tab1:
                 q_cat = st.selectbox("문의 유형", ["운동 피드백", "PT 문의", "기타"])
                 q_text = st.text_area("질문 내용")
@@ -396,7 +434,7 @@ def member_app():
                 for q in st.session_state['qna_db']:
                     if current_user_name in q.get('회원명', ''): 
                         with st.expander(f"[#{q.get('id', 0)}] {q.get('상태', '대기중')} - {q.get('유형', '')}"): 
-                            st.write(f"🙋‍♂️️ 질문: {q.get('내용', '')}")
+                            st.write(f"🙋‍♂️ 질문: {q.get('내용', '')}")
                             if q.get('상태') == '답변완료':
                                 st.info(f"👨‍🏫 담당자 답변: {q.get('답변', '')}")
             with tab2:
