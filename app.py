@@ -91,28 +91,82 @@ def reset_routine():
 if 'my_routine' not in st.session_state: reset_routine()
 
 # ==========================================
-# 3. 🎨 커스텀 CSS
+# 3. 🎨 커스텀 CSS (시인성 문제 전면 수정)
 # ==========================================
 def inject_custom_css():
+    # 1) 공통 폰트 및 UI 설정
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff'); font-weight: 500; }
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff'); font-weight: 700; }
     p, h1, h2, h3, h4, h5, h6, label, li, a, button, b, strong, svg text, canvas { font-family: 'GmarketSans', 'Montserrat', sans-serif !important; letter-spacing: -0.5px; }
-    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td { font-family: 'GmarketSans', sans-serif !important; }
-    .stApp { background-color: #0f172a !important; }
-    [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons), [data-testid="stMain"] label, [data-testid="stMain"] li { color: #ffffff !important; }
-    .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
-    .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; }
-    .stButton>button { border-radius: 12px !important; font-weight: 800 !important; }
-    .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #1e293b !important; }
     </style>
     """, unsafe_allow_html=True)
-    if st.session_state['role'] == 'OWNER':
-        st.markdown("<style>.stApp { background-color: #F4F7F9 !important; } [data-testid='stMain'] p, h1, h2, h3, span, label { color: #1e293b !important; } .corp-card { background-color: #ffffff; border-radius: 12px; padding: 20px; border-left: 5px solid #2563EB; margin-bottom: 20px; }</style>", unsafe_allow_html=True)
+
+    # 2) 로그인 안 했을 때 (메인 화면)
     if not st.session_state['logged_in']:
-        st.markdown("<style>.stApp { background-image: linear-gradient(rgba(10,10,12,0.6), rgba(10,10,12,0.8)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070'); background-size: cover; }</style>", unsafe_allow_html=True)
+        st.markdown("""
+        <style>
+        .stApp { background-image: linear-gradient(rgba(10,10,12,0.6), rgba(10,10,12,0.8)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070'); background-size: cover; background-position: center; }
+        .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(4rem, 10vw, 8rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
+        .hero-subtitle { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+        
+        /* 🔥 메인 화면 버튼 시인성 대폭 개선 */
+        .stButton>button { 
+            border-radius: 20px !important; 
+            font-size: clamp(1.5rem, 3vw, 2.5rem) !important; 
+            font-weight: 900 !important; 
+            padding: 2rem 1rem !important; 
+            border: 3px solid #ccff00 !important; 
+            color: #ccff00 !important; 
+            background: rgba(0, 0, 0, 0.7) !important; /* 반투명 검은색 배경 추가 */
+            backdrop-filter: blur(10px); 
+            height: auto !important; 
+        }
+        .stButton>button:hover { background: #ccff00 !important; color: #111 !important; transform: scale(1.05); }
+        </style>
+        """, unsafe_allow_html=True)
+
+    # 3) 회원(MEMBER) 화면
+    elif st.session_state['role'] == 'MEMBER':
+        st.markdown("""
+        <style>
+        .stApp { background-color: #0f172a !important; }
+        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] label, [data-testid="stMain"] li { color: #ffffff !important; }
+        .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
+        .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: white !important;}
+        .stButton>button { border-radius: 12px !important; font-weight: 800 !important; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111 !important; border: none !important;}
+        .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        </style>
+        """, unsafe_allow_html=True)
+        
+    # 4) 점주(OWNER) 화면
+    elif st.session_state['role'] == 'OWNER':
+        st.markdown("""
+        <style>
+        .stApp { background-color: #F4F7F9 !important; }
+        
+        /* 🔥 점주 화면 모든 글자/제목 색상 강제 지정 (흰색 묻힘 방지) */
+        [data-testid="stMain"] p, 
+        [data-testid="stMain"] h1, 
+        [data-testid="stMain"] h2, 
+        [data-testid="stMain"] h3, 
+        [data-testid="stMain"] h4,
+        [data-testid="stMain"] span, 
+        [data-testid="stMain"] label { 
+            color: #1e293b !important; 
+        }
+        
+        .corp-card { background-color: #ffffff !important; border-radius: 12px; padding: 20px; border-left: 5px solid #2563EB; margin-bottom: 20px; color: #1e293b !important;}
+        
+        button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: all 0.2s; }
+        button[kind="primary"]:hover { opacity: 0.8; }
+        button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 500 !important; transition: all 0.2s; }
+        button[kind="secondary"]:hover { border-color: #2563EB !important; color: #2563EB !important; }
+        </style>
+        """, unsafe_allow_html=True)
 
 # ==========================================
 # 4. 📱 회원 (MEMBER) 앱 화면
@@ -179,15 +233,12 @@ def member_app():
                 completed_count = sum(1 for r in st.session_state['my_routine'] if r.get('완료', False))
                 st.progress(completed_count / len(st.session_state['my_routine']), text=f"루틴 진행률: {completed_count} / {len(st.session_state['my_routine'])} 완료")
                 
-                # 🔥 KeyError 원천 차단: get() 메서드를 사용하여 기존 세션과 충돌 방지
                 for idx, r in enumerate(st.session_state['my_routine']):
                     col1, col2 = st.columns([3, 1])
                     with col1:
-                        # 상태 표시 (건너뜀/완료/대기)
                         status_mark = "✅" if r.get('완료', False) else ("⏭️" if r.get('상태', '대기') == "건너뜀" else "⬜")
                         st.markdown(f"**{status_mark} [{r.get('부위', '')}] {r.get('기구', '')}** ({r.get('목표', '')})")
                     with col2:
-                        # 완료되지 않았고, 건너뛴 상태가 아닐 때만 버튼 표시
                         if not r.get('완료', False) and r.get('상태', '대기') != "건너뜀":
                             if st.button("건너뛰기/변경", key=f"rep_{idx}"):
                                 st.session_state[f"show_exp_{idx}"] = not st.session_state.get(f"show_exp_{idx}", False)
@@ -272,7 +323,7 @@ def member_app():
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
-                st.info(f"🗣️ 트레이너: '{current_user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 수행하셨네요.'")
+                st.info(f"🗣️️ 트레이너: '{current_user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 수행하셨네요.'")
                 
                 card_html = f"""
                 <div class='owoonwan-card'>
@@ -486,6 +537,7 @@ def main():
             st.markdown("<div class='login-card'>", unsafe_allow_html=True)
             col_b1, col_b2 = st.columns(2)
             with col_b1:
+                # 버튼 크기가 대폭 커지고 시인성이 확보되었습니다.
                 if st.button("👟 회원 시연 접속", use_container_width=True):
                     st.session_state['logged_in'] = True; st.session_state['role'] = 'MEMBER'; st.rerun()
             with col_b2:
