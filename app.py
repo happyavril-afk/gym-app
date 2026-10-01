@@ -16,7 +16,7 @@ SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 통신 실패 및 시트 오입력 시 투입되는 예비(Fallback) 데이터 
+# [안전장치] 통신 실패 시 구동을 보장하는 예비(Fallback) 데이터 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
@@ -133,17 +133,15 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
         
     elif st.session_state['role'] == 'OWNER':
-        # 🔥 점주 앱 UI 전용 버튼 토글 CSS 디자인 추가
         st.markdown("""
         <style>
         .stApp { background-color: #F4F7F9; }
         .corp-card { background-color: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #2563EB; margin-bottom: 20px; }
-        
-        /* Primary 버튼 (선택된 기구) : 파란색 색상 표기 */
+        .stButton>button { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; }
+        /* Primary 버튼 (선택된 기구) */
         button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: all 0.2s; }
         button[kind="primary"]:hover { opacity: 0.8; }
-        
-        /* Secondary 버튼 (선택 안 된 기구) : 하얀 바탕 적용 */
+        /* Secondary 버튼 (선택 안 된 기구) */
         button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 500 !important; transition: all 0.2s; }
         button[kind="secondary"]:hover { border-color: #2563EB !important; color: #2563EB !important; }
         </style>
@@ -309,6 +307,9 @@ def owner_app():
         "📅 Epic 10. PT 일정 관리"
     ])
 
+    # 모든 회원 리스트 (멀티셀렉트 옵션용)
+    all_members = df_members['회원명'].tolist() if '회원명' in df_members.columns else []
+
     if menu == "🏠 Epic 0. 오늘의 할 일 홈":
         st.title("🏠 Epic 0. 오늘의 할 일 홈 화면")
         st.markdown("<div class='corp-card'>점주님이 오늘 당장 처리해야 할 핵심 업무 현황을 요약합니다. (DB 연동)</div>", unsafe_allow_html=True)
@@ -329,18 +330,42 @@ def owner_app():
         if not churn_df.empty and '이탈확률(%)' in churn_df.columns:
             st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(x=alt.X('이탈확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')), y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')), tooltip=['회원명', '이탈확률(%)']).properties(height=300), use_container_width=True)
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
-        msg_template = st.text_area("맞춤형 복귀 유도 알림톡 템플릿", "회원님, 최근 방문이 뜸하시네요! 이번 주 오시면 혜택을 드립니다.")
-        if st.button("일괄 자동 컨택 발송 (Epic 1-2)", type="primary"): st.toast("이탈 위험군 전체 메시지 발송 완료")
+        
+        # 🔥 메시지 관리 CRM UI 추가
+        st.markdown("---")
+        st.markdown("#### 📨 맞춤형 복귀 유도 컨택")
+        default_churn = [m for m in churn_df['회원명'].tolist() if m in all_members] if not churn_df.empty else []
+        selected_churn = st.multiselect("발송 대상 선택 및 편집", options=all_members, default=default_churn)
+        msg_template = st.text_area("메시지 내용 수정", "회원님, 최근 방문이 뜸하시네요! 이번 주 오시면 특별한 혜택을 드립니다.")
+        if st.button("일괄 자동 컨택 발송", type="primary"): 
+            st.toast(f"✅ {len(selected_churn)}명의 회원에게 복귀 유도 메시지가 발송되었습니다.")
 
     elif menu == "🏆 Epic 2. 우수 회원 관리":
         st.title("🏆 Epic 2. 우수 회원 자동 선별")
         st.dataframe(vip_df, use_container_width=True, hide_index=True)
-        if st.button("🎁 선택 회원 재등록 쿠폰/감사 메시지 발송", type="primary"): st.toast("VIP 혜택 발송 완료")
+        
+        # 🔥 메시지 관리 CRM UI 추가
+        st.markdown("---")
+        st.markdown("#### 🎁 VIP 전용 혜택 발송")
+        default_vip = [m for m in vip_df['회원명'].tolist() if m in all_members] if not vip_df.empty else []
+        selected_vip = st.multiselect("발송 대상 선택 및 편집", options=all_members, default=default_vip)
+        msg_vip = st.text_area("메시지 내용 수정", "회원님, 꾸준한 출석과 성장을 축하드립니다! VIP 전용 재등록 쿠폰을 발급해 드렸습니다.")
+        if st.button("선택 회원 재등록 쿠폰/감사 메시지 발송", type="primary"): 
+            st.toast(f"✅ {len(selected_vip)}명의 VIP 회원에게 혜택이 발송되었습니다.")
 
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
         st.dataframe(sales_df, hide_index=True, use_container_width=True)
-        if st.button("🎟️ 맞춤형 원포인트 PT 쿠폰 일괄 발송", type="primary"): st.toast("영업 쿠폰 발송 완료")
+        
+        # 🔥 메시지 관리 CRM UI 추가
+        st.markdown("---")
+        st.markdown("#### 🎟️ 원포인트 PT 영업 쿠폰 발송")
+        default_sales = [m for m in sales_df['회원명'].tolist() if m in all_members] if not sales_df.empty else []
+        selected_sales = st.multiselect("발송 대상 선택 및 편집", options=all_members, default=default_sales)
+        msg_sales = st.text_area("메시지 내용 수정", "회원님, 최근 운동 중량이 정체되셨나요? 정확한 자세 교정을 위한 원포인트 PT 무료 쿠폰을 보내드립니다!")
+        if st.button("맞춤형 원포인트 PT 쿠폰 일괄 발송", type="primary"): 
+            st.toast(f"✅ {len(selected_sales)}명의 회원에게 영업 쿠폰이 발송되었습니다.")
+            
         st.markdown("<br><h4>📊 전체 회원 운동 로그 열람 (B2B 관리자용)</h4>", unsafe_allow_html=True)
         st.dataframe(history_df.sort_values(by="날짜", ascending=False), height=200, use_container_width=True)
 
@@ -364,31 +389,22 @@ def owner_app():
         
         machine_columns = [col for col in heatmap_df.columns if col != "시간"]
         
-        # 🔥 세션 스테이트 초기화 (최초 접속 시 '파워 랙', '트레드밀' 기본 활성화)
         if 'active_machines' not in st.session_state:
             preferred = ["파워 랙 (웨이트)", "트레드밀 (유산소)"]
             st.session_state.active_machines = [m for m in preferred if m in machine_columns]
             if not st.session_state.active_machines and machine_columns:
                 st.session_state.active_machines = machine_columns[:2]
         
-        # 구글 시트 기구 컬럼이 변경될 경우를 대비한 정리 로직
         st.session_state.active_machines = [m for m in st.session_state.active_machines if m in machine_columns]
-        
         st.markdown("**조회할 기구 선택 (다중 선택 가능):**")
         
-        # 🔥 기구명 리스트를 나열형 토글 버튼(Toggle Buttons) 형태로 구성
         if machine_columns:
-            # 기구 수만큼 열(Columns) 생성하여 가로로 균등하게 배치
             cols = st.columns(len(machine_columns))
             for idx, machine in enumerate(machine_columns):
                 is_active = machine in st.session_state.active_machines
-                
-                # 활성화 상태면 Primary(파란색), 비활성화면 Secondary(흰색)
                 btn_style = "primary" if is_active else "secondary"
-                
                 with cols[idx]:
                     if st.button(machine, type=btn_style, use_container_width=True, key=f"btn_mac_{idx}"):
-                        # 버튼 클릭 시 리스트에 추가/제거 및 즉시 갱신
                         if is_active:
                             st.session_state.active_machines.remove(machine)
                         else:
@@ -411,9 +427,14 @@ def owner_app():
             ).properties(height=350)
             st.altair_chart(chart, use_container_width=True)
             
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("📉 특정 시간대 방문 회원 '오프피크 마케팅' 일괄 발송", type="primary"): 
-            st.toast("오프피크 방문 유도 쿠폰이 발송되었습니다.")
+        # 🔥 메시지 관리 CRM UI 추가
+        st.markdown("---")
+        st.markdown("#### 📉 오프피크(낮 시간대) 마케팅 발송")
+        default_offpeak = ["전소민", "김철수"] if all(x in all_members for x in ["전소민", "김철수"]) else all_members[:2]
+        selected_offpeak = st.multiselect("낮 시간대 방문 이력 회원 (대상 편집)", options=all_members, default=default_offpeak)
+        msg_offpeak = st.text_area("메시지 내용 수정", "회원님, 붐비지 않는 낮 시간(13시~16시)에 방문하시면 프로틴 음료 1잔 무료 쿠폰을 드립니다!")
+        if st.button("특정 시간대 방문 회원 '오프피크 마케팅' 일괄 발송", type="primary"): 
+            st.toast(f"✅ {len(selected_offpeak)}명의 회원에게 오프피크 마케팅 쿠폰이 발송되었습니다.")
 
     elif menu == "🔒 Epic 6. 개인정보 동의":
         st.title("🔒 Epic 6. 동의 철회 마스킹")
@@ -435,15 +456,32 @@ def owner_app():
 
     elif menu == "🎉 Epic 8. 이벤트 홍보":
         st.title("🎉 Epic 8. 기획 이벤트 타겟 홍보")
-        st.text_input("이벤트 명", "여름 맞이 바디프로필 챌린지")
-        st.selectbox("타겟 필터링", ["전체 회원", "최근 1개월 가입자", "주 3회 이상 출석 VIP"])
-        if st.button("이벤트 안내 PUSH 발송", type="primary"): st.toast("이벤트 배포 성공")
+        event_name = st.text_input("이벤트 명", "여름 맞이 바디프로필 챌린지")
+        event_filter = st.selectbox("타겟 필터링 (자동 분류)", ["전체 회원", "최근 1개월 가입자", "주 3회 이상 출석 VIP"])
+        
+        # 🔥 메시지 관리 CRM UI 추가
+        st.markdown("---")
+        st.markdown("#### 📣 이벤트 PUSH 발송 설정")
+        default_event = all_members if event_filter == "전체 회원" else ([m for m in vip_df['회원명'].tolist() if m in all_members] if not vip_df.empty else [])
+        selected_event = st.multiselect("최종 발송 대상 확인 및 편집", options=all_members, default=default_event)
+        msg_event = st.text_area("안내 메시지 수정", f"[{event_name}] 회원님을 위한 특별한 이벤트가 시작되었습니다! 지금 헬스장 앱에서 내용을 확인하고 바로 신청해 보세요.")
+        if st.button("이벤트 안내 PUSH 일괄 발송", type="primary"): 
+            st.toast(f"✅ {len(selected_event)}명의 회원에게 이벤트 배포가 완료되었습니다.")
 
     elif menu == "🌱 Epic 9. 신규 회원 정착":
         st.title("🌱 Epic 9. 신규 회원 초기 정착 모니터링")
         onboard_df = pd.DataFrame({"신규 회원명": ["최신규", "이초보"], "가입일": ["D-3", "D-6"], "인바디 등록": ["완료", "미등록"], "첫 방문": ["미방문", "미방문"]})
         st.dataframe(onboard_df, hide_index=True, use_container_width=True)
-        if st.button("앱 이용 안내 및 운동 플랜 독려 알림 발송"): st.toast("정착 유도 알림 발송")
+        
+        # 🔥 메시지 관리 CRM UI 추가
+        st.markdown("---")
+        st.markdown("#### 🤝 초기 정착 지원 안내 발송")
+        default_onboard = ["최신규", "이초보"] # 예시 데이터 활용
+        full_onboard_opts = list(set(all_members + default_onboard)) # 옵션 병합 방어
+        selected_onboard = st.multiselect("안내가 필요한 신규 회원", options=full_onboard_opts, default=default_onboard)
+        msg_onboard = st.text_area("안내 메시지 수정", "회원님, 가입을 진심으로 환영합니다! 기구 사용법이나 운동 플랜이 궁금하시다면 언제든 앱을 통해 1:1 질문을 남겨주세요.")
+        if st.button("앱 이용 안내 및 운동 플랜 독려 알림 발송", type="primary"): 
+            st.toast(f"✅ {len(selected_onboard)}명의 신규 회원에게 정착 유도 알림이 발송되었습니다.")
 
     elif menu == "📅 Epic 10. PT 일정 관리":
         st.title("📅 Epic 10. 유휴시간(PT Schedule) 최적화")
