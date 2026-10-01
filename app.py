@@ -2,62 +2,76 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
+import io
 from datetime import datetime
 
 # ==========================================
-# 1. 💾 대규모 풍부한 시뮬레이션 데이터 로드
+# 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
 # ==========================================
-def load_mock_data():
-    history_df = pd.DataFrame({
-        "날짜": ["07.01", "07.03", "07.05", "07.08", "07.10", "07.14", "07.18", "07.22", "07.25", "07.28", 
-                 "08.02", "08.05", "08.10", "08.13", "08.15", "08.20", "08.22", "08.25", "08.28", "09.01", 
-                 "09.03", "09.05", "09.08", "09.12", "09.15", "09.18", "09.20", "09.21"],
-        "운동 부위": ["가슴", "하체", "등", "어깨", "가슴", "하체", "등", "어깨", "하체", "가슴", 
-                  "하체", "등", "어깨", "가슴", "가슴", "하체", "전신", "등", "가슴", "등", 
-                  "하체", "가슴", "하체", "등", "어깨", "가슴", "전신", "하체"],
-        "주요 기구": ["벤치프레스", "스쿼트", "랫풀다운", "밀리터리 프레스", "벤치프레스", "레그 프레스", "시티드 로우", "숄더 프레스", "런지", "체스트 프레스", 
-                  "레그 익스텐션", "풀업", "사이드 레터럴 레이즈", "인클라인 벤치", "벤치프레스", "스쿼트", "케이블 크로스오버", "바벨 로우", "펙덱 플라이", "풀업", 
-                  "레그 프레스", "벤치프레스", "파워 랙", "랫풀다운", "숄더 프레스", "벤치프레스", "케이블", "레그 프레스"],
-        "총 볼륨(kg)": [1800, 2100, 1900, 1200, 1950, 2200, 2050, 1300, 2100, 2000, 
-                     2300, 2100, 1400, 2200, 2100, 2500, 1800, 2400, 2300, 2100, 
-                     2700, 2400, 3200, 2100, 1500, 2800, 2000, 3800]
-    })
-    
-    churn_df = pd.DataFrame({
-        "회원명": ["김철수", "박지민", "이동국", "한소희", "마동석", "정우성", "이지은", "최우식"],
-        "위험 사유": ["18일 미방문", "방문 주 4회➔1회", "24일 미방문", "PT 종료 후 미방문", "만료 D-5 & 미방문", "방문 시간대 불규칙", "최근 2주 볼륨 급감", "30일 장기 미방문"],
-        "이탈 확률(%)": [88, 75, 96, 68, 92, 55, 62, 99],
-        "회원권 잔여일": [45, 120, 12, 200, 5, 80, 150, 3]
-    })
-    
-    vip_df = pd.DataFrame({
-        "회원명": ["이광수", "유재석", "송지효", "김종국", "하동훈", "양세찬"],
-        "주 평균 방문": [4.5, 3.2, 5.1, 6.5, 3.8, 4.0],
-        "볼륨 증감률(%)": [12, 5, 22, 35, 8, 15],
-        "가입 기간(개월)": [14, 8, 24, 48, 12, 6],
-        "최근 응답": ["긍정적", "보통", "매우 긍정", "긍정적", "보통", "긍정적"]
-    })
-    
-    sales_df = pd.DataFrame({
-        "회원명": ["최운식", "전소민", "조세호", "남창희", "김숙"],
-        "정체 종목": ["스쿼트", "숄더 프레스", "데드리프트", "벤치프레스", "랫풀다운"],
-        "정체 기간(주)": [4, 3, 6, 3, 5],
-        "중량(kg)": [80, 15, 100, 65, 30],
-        "수행률(%)": [65, 40, 80, 25, 45],
-        "AI 추천 영업": ["자세 교정 제안", "보조 운동 제안", "하체 루틴 변경", "안전 보조", "그립 교정 레슨"]
-    })
-    
-    hours = ["06:00", "09:00", "12:00", "15:00", "18:00", "19:00", "20:00", "22:00"]
-    heatmap_df = pd.DataFrame({
-        "시간": hours,
-        "파워 랙 (웨이트)": [5, 15, 25, 45, 80, 100, 95, 60],
-        "트레드밀 (유산소)": [10, 40, 30, 65, 95, 90, 80, 60],
-        "스미스 머신": [2, 10, 20, 35, 75, 85, 70, 45],
-        "스트레칭존": [5, 10, 15, 20, 40, 50, 45, 20],
-        "케이블 머신": [8, 20, 35, 50, 85, 95, 80, 50]
-    })
-    
-    return history_df, churn_df, vip_df, sales_df, heatmap_df
+# 공유해주신 스프레드시트의 고유 ID
+SHEET_ID = "1Kf_FrZIoagIXkZIH1dO14fKPpgbLk85qDDM_r4zfno8"
+
+# 💡 중요: 각 시트(탭)를 클릭했을 때 주소창 맨 끝에 나오는 'gid=숫자'를 아래에 정확히 적어주세요!
+# (기본적으로 첫 번째 시트의 gid는 0입니다.)
+SHEET_URL_MEMBER_ANALYTICS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0" # 1. 회원 분석 탭 (gid=0)
+SHEET_URL_WORKOUT_HISTORY  = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=111111" # 2. 운동 이력 탭 (숫자 변경 필요)
+SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=222222" # 3. 혼잡도 탭 (숫자 변경 필요)
+SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=333333" # 4. Q&A 탭 (숫자 변경 필요)
+SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=444444" # 5. 민원 탭 (숫자 변경 필요)
+
+# [안전장치] 구글 시트 접근 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터
+FALLBACK_DATA = {
+    "member": """회원명,잔여일,주평균방문,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류
+김철수,45,1.2,-15,없음,0,88,이탈위험
+박지민,120,1.5,-10,없음,0,75,이탈위험
+이광수,150,4.5,12,없음,0,5,VIP
+송지효,210,5.1,22,없음,0,2,VIP
+최운식,180,3.0,2,스쿼트,4,25,정체기
+전소민,60,2.5,0,숄더 프레스,3,40,정체기""",
+    "workout": """날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)
+08.20,하체,레그 프레스,100,10,3,3000
+08.22,가슴,벤치프레스,60,12,4,2880
+08.25,등,랫풀다운,45,15,3,2025
+08.28,하체,스쿼트,80,10,4,3200""",
+    "heatmap": """시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신
+06:00,10,25,5,15,10
+09:00,25,45,15,20,25
+12:00,30,35,25,25,40
+15:00,50,60,40,30,55
+18:00,95,100,85,60,90""",
+    "qna": """id,시간,회원명,유형,내용,상태,답변
+1,오늘 14:20,박수민,🏋️ 운동/자세 피드백,어깨가 결려요.,대기중,
+2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!""",
+    "facility": """id,시간,신고자,위치,내용,상태,답변
+1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,
+2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"""
+}
+
+@st.cache_data(ttl=30) # 30초마다 구글 시트 데이터 갱신
+def fetch_data(url, fallback_key):
+    try:
+        if "http" in url:
+            return pd.read_csv(url)
+    except:
+        pass
+    return pd.read_csv(io.StringIO(FALLBACK_DATA[fallback_key]))
+
+# 데이터 로딩 및 B2B 대시보드용 데이터프레임 분할 (정규화)
+df_members = fetch_data(SHEET_URL_MEMBER_ANALYTICS, "member")
+history_df = fetch_data(SHEET_URL_WORKOUT_HISTORY, "workout")
+heatmap_df = fetch_data(SHEET_URL_HEATMAP, "heatmap")
+df_qna_init = fetch_data(SHEET_URL_QNA, "qna").fillna("")
+df_fac_init = fetch_data(SHEET_URL_FACILITY, "facility").fillna("")
+
+# 타겟별로 데이터 분리 (컬럼 유무를 체크하여 유연하게 처리)
+if '타겟분류' in df_members.columns:
+    churn_df = df_members[df_members['타겟분류'] == '이탈위험'].drop(columns=['타겟분류', '정체종목', '정체기간(주)'], errors='ignore')
+    vip_df = df_members[df_members['타겟분류'] == 'VIP'].drop(columns=['타겟분류', '정체종목', '정체기간(주)', '이탈확률(%)'], errors='ignore')
+    sales_df = df_members[df_members['타겟분류'] == '정체기'].drop(columns=['타겟분류', '잔여일', '이탈확률(%)'], errors='ignore')
+else:
+    churn_df = df_members
+    vip_df = df_members
+    sales_df = df_members
 
 # ==========================================
 # 2. 페이지 및 세션 상태 초기화
@@ -69,20 +83,12 @@ if 'logged_in' not in st.session_state:
     st.session_state['role'] = None
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
+    
+# Q&A와 시설 민원은 앱 내에서 '답변완료' 등 상태 업데이트가 필요하므로 Session State로 이관
 if 'qna_db' not in st.session_state:
-    st.session_state['qna_db'] = [
-        {"id": 1, "시간": "오늘 14:20", "회원명": "박수민", "유형": "🏋️ 운동/자세 피드백", "내용": "벤치프레스 할 때 오른쪽 어깨가 결려요.", "상태": "대기중", "답변": ""},
-        {"id": 2, "시간": "오늘 13:05", "회원명": "김민지", "유형": "💳 회원권/PT 문의", "내용": "PT 10회 추가 결제 할인 문의", "상태": "답변완료", "답변": "네, 10% 추가 할인 적용됩니다!"},
-        {"id": 3, "시간": "어제 19:30", "회원명": "장동건", "유형": "💡 기타", "내용": "주차 등록은 어디서 하나요?", "상태": "답변완료", "답변": "인포데스크 태블릿에서 차량번호 4자리 입력하시면 3시간 무료입니다."}
-    ]
+    st.session_state['qna_db'] = df_qna_init.to_dict('records')
 if 'facility_db' not in st.session_state:
-    st.session_state['facility_db'] = [
-        {"id": 1, "시간": "오늘 09:15", "신고자": "이동국", "위치": "프리웨이트존", "내용": "인클라인 벤치 각도 조절 핀 불량", "상태": "접수됨", "답변": ""},
-        {"id": 2, "시간": "어제 21:00", "신고자": "유재석", "위치": "남자 탈의실", "내용": "안쪽 샤워기 수압이 너무 약해요", "상태": "조치중", "답변": "관리소에 수리 요청했습니다."},
-        {"id": 3, "시간": "어제 14:20", "신고자": "송지효", "위치": "유산소존", "내용": "3번 러닝머신 덜컹거림", "상태": "조치완료", "답변": "수평 조절 나사 재조정 완료했습니다."}
-    ]
-
-history_df, churn_df, vip_df, sales_df, heatmap_df = load_mock_data()
+    st.session_state['facility_db'] = df_fac_init.to_dict('records')
 
 # ==========================================
 # 3. 🎨 다이내믹 커스텀 CSS
@@ -154,7 +160,6 @@ def member_app():
         
         if menu == "📊 1. 목표 및 체형 분석":
             st.markdown("### 📊 M02. 인바디 업로드 및 목표 설정")
-            st.info("신규 회원의 인바디를 분석하고 주간 목표를 설정합니다.")
             st.file_uploader("인바디 결과지 (이미지/PDF) 업로드")
             st.selectbox("🎯 최우선 운동 목표", ["근력 증가 (벌크업)", "체중 관리 (다이어트)", "운동 습관 만들기", "재활 및 체형 교정"])
             col1, col2 = st.columns(2)
@@ -165,7 +170,7 @@ def member_app():
 
         elif menu == "🚀 2. 오늘의 처방 (Today's Fit)":
             st.markdown("### 🤖 M03. AI 트레이너 오늘의 루틴")
-            st.success("🗣️ 트레이너: '지난번 레그프레스 10회를 훌륭히 소화하셨네요! 최근 하체 볼륨이 부족하니 오늘은 하체 위주로 가볼까요?'")
+            st.success("🗣️️ 트레이너: '지난번 레그프레스 기록을 훌륭히 소화하셨네요! 최근 하체 볼륨이 부족하니 오늘은 하체 위주로 가볼까요?'")
             st.write("---")
             st.checkbox("🔥 워밍업: 스텝밀(천국의 계단) 10분")
             st.checkbox("💪 메인 1: 파워 랙(스쿼트) 80kg x 10회 (4세트) [직전 동일]")
@@ -197,15 +202,20 @@ def member_app():
         elif menu == "📈 4. 주간 리포트 및 이력":
             st.markdown("### 🏆 M14. 주간 목표 진행률")
             st.progress(0.75, text="주간 방문 목표: 4회 중 3회 완료 (75%)")
-            st.markdown("### 📈 M16. 2개월간 총 볼륨 성장 추이")
-            chart_history = alt.Chart(history_df).mark_line(point=True, color='#00f2fe').encode(
-                x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)),
-                y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False)),
-                tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
-            ).properties(height=300)
-            st.altair_chart(chart_history, use_container_width=True)
-            with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
-            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 15% 상승했습니다.'")
+            st.markdown("### 📈 M16. 누적 총 볼륨 성장 추이 (스프레드시트 연동)")
+            
+            if '날짜' in history_df.columns:
+                chart_history = alt.Chart(history_df).mark_line(point=True, color='#00f2fe').encode(
+                    x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)),
+                    y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False)),
+                    tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
+                ).properties(height=300)
+                st.altair_chart(chart_history, use_container_width=True)
+                with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
+            else:
+                st.write("데이터 형식을 확인해주세요.")
+            
+            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
 
         elif menu == "💬 5. 소통 및 신고함":
@@ -213,13 +223,19 @@ def member_app():
             with tab1:
                 q_cat = st.selectbox("유형", ["운동 피드백", "PT 문의", "기타"])
                 q_text = st.text_area("질문 내용")
-                if st.button("질문 전송"): st.toast("접수 완료!")
+                if st.button("질문 전송"): 
+                    st.session_state['qna_db'].insert(0, {"id": len(st.session_state['qna_db'])+1, "시간": "방금전", "회원명": "박수민(본인)", "유형": q_cat, "내용": q_text, "상태": "대기중", "답변": ""})
+                    st.toast("접수 완료!")
+                    st.rerun()
                 for q in st.session_state['qna_db']:
                     with st.expander(f"[{q['상태']}] {q['유형']}"): st.write(f"Q: {q['내용']}\nA: {q['답변']}")
             with tab2:
                 f_loc = st.selectbox("위치", ["프리웨이트존", "유산소존", "탈의실"])
                 f_text = st.text_area("신고 내용")
-                if st.button("신고 전송"): st.toast("신고 접수 완료!")
+                if st.button("신고 전송"):
+                    st.session_state['facility_db'].insert(0, {"id": len(st.session_state['facility_db'])+1, "시간": "방금전", "신고자": "박수민(본인)", "위치": f_loc, "내용": f_text, "상태": "접수됨", "답변": ""})
+                    st.toast("신고 접수 완료!")
+                    st.rerun()
                 for f in st.session_state['facility_db']:
                     with st.expander(f"[{f['상태']}] {f['위치']}"): st.write(f"{f['내용']}\n(조치: {f['답변']})")
 
@@ -234,7 +250,7 @@ def owner_app():
         "🏆 Epic 2. 우수 회원 관리",
         "🎯 Epic 3. PT 영업 및 성장", 
         "💬 Epic 4. Q&A 및 소통", 
-        "🏢 Epic 5. 기구별 혼잡도 분석",  # 💡 업데이트된 메뉴명
+        "🏢 Epic 5. 기구별 혼잡도 분석",
         "🔒 Epic 6. 개인정보 동의",
         "🛠️ Epic 7. 시설 민원 관리",
         "🎉 Epic 8. 이벤트 홍보",
@@ -244,20 +260,26 @@ def owner_app():
 
     if menu == "🏠 Epic 0. 오늘의 할 일 홈":
         st.title("🏠 Epic 0. 오늘의 할 일 홈 화면")
-        st.markdown("<div class='corp-card'>점주님이 오늘 당장 처리해야 할 핵심 업무 현황을 요약합니다.</div>", unsafe_allow_html=True)
+        st.markdown("<div class='corp-card'>점주님이 오늘 당장 처리해야 할 핵심 업무 현황을 요약합니다. (DB 연동)</div>", unsafe_allow_html=True)
+        pending_qna = sum(1 for q in st.session_state['qna_db'] if q['상태'] == '대기중')
+        pending_fac = sum(1 for f in st.session_state['facility_db'] if f['상태'] == '접수됨')
+        
         c1, c2, c3 = st.columns(3)
         c1.metric("🚨 신규 이탈 위험군", f"{len(churn_df)}명", "조치 필요")
-        c2.metric("💬 미답변 1:1 질문", "1건", "대기중")
-        c3.metric("🛠️ 신규 시설 민원", "1건", "확인 요망")
+        c2.metric("💬 미답변 1:1 질문", f"{pending_qna}건", "대기중")
+        c3.metric("🛠️ 신규 시설 민원", f"{pending_fac}건", "확인 요망")
         c4, c5, c6 = st.columns(3)
-        c4.metric("🏆 이달의 신규 우수 회원", f"{len(vip_df)}명", "+2명")
-        c5.metric("🌱 초기 정착 필요 신규회원", "8명", "플랜 수립")
+        c4.metric("🏆 신규 우수 회원", f"{len(vip_df)}명", "+2명")
+        c5.metric("🌱 초기 정착 필요", "8명", "플랜 수립")
         c6.metric("🎯 정체기 돌파 시급", f"{len(sales_df)}명", "PT 제안 타겟")
 
     elif menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
-        st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(x=alt.X('이탈 확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')), y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')), tooltip=['회원명', '위험 사유', '이탈 확률(%)']).properties(height=300), use_container_width=True)
+        
+        if '이탈확률(%)' in churn_df.columns:
+            st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(x=alt.X('이탈확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')), y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')), tooltip=['회원명', '이탈확률(%)']).properties(height=300), use_container_width=True)
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
+        
         msg_template = st.text_area("맞춤형 복귀 유도 알림톡 템플릿", "회원님, 최근 방문이 뜸하시네요! 이번 주 오시면 혜택을 드립니다.")
         if st.button("일괄 자동 컨택 발송 (Epic 1-2)", type="primary"): st.toast("이탈 위험군 전체 메시지 발송 완료")
 
@@ -268,7 +290,7 @@ def owner_app():
 
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
-        st.dataframe(sales_df, column_config={"수행률(%)": st.column_config.ProgressColumn("수행률", min_value=0, max_value=100, format="%d%%")}, hide_index=True, use_container_width=True)
+        st.dataframe(sales_df, hide_index=True, use_container_width=True)
         if st.button("🎟️ 맞춤형 원포인트 PT 쿠폰 일괄 발송", type="primary"): st.toast("영업 쿠폰 발송 완료")
 
     elif menu == "💬 Epic 4. Q&A 및 소통":
@@ -281,30 +303,20 @@ def owner_app():
                     if st.button("답장 발송", key=f"btn_{q['id']}", type="primary"):
                         q['상태'] = '답변완료'; q['답변'] = reply; st.rerun()
 
-    # 💡 [업데이트] Epic 5. 기구별 혼잡도 선택 조회 기능 완벽 구현
     elif menu == "🏢 Epic 5. 기구별 혼잡도 분석":
         st.title("🏢 Epic 5. 기구별 맞춤 혼잡도 분석")
-        st.write("시간대별 기구 이용률을 확인하고 싶은 종목을 선택하세요.")
+        st.write("구글 스프레드시트의 시간대별 점유율 데이터를 기반으로 시각화합니다.")
         
-        # '시간' 컬럼을 제외한 순수 기구 목록 추출
         machine_columns = [col for col in heatmap_df.columns if col != "시간"]
-        
-        # 1. 다중 선택 (Multi-select) UI 제공 (기본값: 상위 2개 기구)
-        selected_machines = st.multiselect(
-            "조회할 기구 선택:", 
-            options=machine_columns, 
-            default=["파워 랙 (웨이트)", "트레드밀 (유산소)"]
-        )
+        selected_machines = st.multiselect("조회할 기구 선택:", options=machine_columns, default=["파워 랙 (웨이트)", "트레드밀 (유산소)"] if len(machine_columns) > 1 else machine_columns)
         
         if not selected_machines:
             st.warning("조회할 기구를 최소 1개 이상 선택해주세요.")
         else:
-            # 2. 선택한 기구만 필터링하여 데이터 변환 (Melt)
             cols_to_keep = ["시간"] + selected_machines
             filtered_df = heatmap_df[cols_to_keep]
             df_melt = filtered_df.melt('시간', var_name='기구', value_name='사용량(%)')
             
-            # 3. Area Chart 시각화 적용
             chart = alt.Chart(df_melt).mark_area(opacity=0.6).encode(
                 x=alt.X('시간:O', axis=alt.Axis(labelAngle=0, title='시간대')), 
                 y=alt.Y('사용량(%):Q', stack=None, axis=alt.Axis(title='누적 점유율(%)')), 
@@ -328,8 +340,11 @@ def owner_app():
             with st.expander(f"[{f['상태']}] {f['위치']} - {f['신고자']}"):
                 st.write(f"민원: {f['내용']}")
                 col1, col2 = st.columns([1, 3])
-                with col1: status = st.selectbox("상태", ["접수됨", "조치중", "조치완료"], key=f"f_stat_{f['id']}")
-                with col2: reply = st.text_input("결과", f['답변'], key=f"f_rep_{f['id']}")
+                # 에러 방지를 위해 상태 인덱스 확인
+                status_list = ["접수됨", "조치중", "조치완료"]
+                idx = status_list.index(f['상태']) if f['상태'] in status_list else 0
+                with col1: status = st.selectbox("상태", status_list, index=idx, key=f"f_stat_{f['id']}")
+                with col2: reply = st.text_input("결과", f.get('답변', ''), key=f"f_rep_{f['id']}")
                 if st.button("저장", key=f"f_btn_{f['id']}", type="primary"):
                     f['상태'] = status; f['답변'] = reply; st.rerun()
 
