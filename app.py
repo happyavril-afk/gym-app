@@ -8,49 +8,39 @@ from datetime import datetime
 import google.generativeai as genai
 
 # ==========================================
-# 0. 🤖 Gemini AI 안전 설정 (Github 경고 우회)
+# 0. 🤖 Gemini AI 안전 설정
 # ==========================================
 if 'gemini_api_key' not in st.session_state:
     st.session_state['gemini_api_key'] = ""
-if 'ai_model' not in st.session_state:
-    st.session_state['ai_model'] = None
-
-def init_ai(api_key):
-    try:
-        genai.configure(api_key=api_key)
-        st.session_state['ai_model'] = genai.GenerativeModel('gemini-1.5-flash')
-        return True
-    except:
-        st.session_state['ai_model'] = None
-        return False
 
 @st.cache_data(ttl=3600) 
 def get_ai_greeting(user_name, routine_theme, api_key):
-    if not api_key: return f"🗣 AI 트레이너: '{user_name}님, 오늘의 테마는 [{routine_theme}]입니다! 부상 없이 파이팅해봐요!'"
+    # 키가 없거나 정상적인 Gemini 키(AIzaSy...)가 아니면 방어 로직 작동
+    if not api_key or not api_key.startswith("AIzaSy"): 
+        return f"🗣 (기본 모드) '{user_name}님, 오늘의 테마는 [{routine_theme}]입니다! 부상 없이 파이팅해봐요!'"
     
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    prompt = f"너는 친절하고 전문적인 헬스장 AI 트레이너야. 회원이름은 '{user_name}'이고, 오늘 운동 테마는 '{routine_theme}'야. 이 회원에게 오늘 이 테마를 추천하는 이유를 살짝 섞어서, 파이팅 넘치고 경쾌한 코칭 멘트 2~3문장을 작성해줘. 이모지도 적절히 써줘."
     try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"너는 친절하고 전문적인 헬스장 AI 트레이너야. 회원이름은 '{user_name}'이고, 오늘 운동 테마는 '{routine_theme}'야. 이 회원에게 오늘 이 테마를 추천하는 이유를 살짝 섞어서, 파이팅 넘치고 경쾌한 코칭 멘트 2~3문장을 작성해줘. 이모지도 적절히 써줘."
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
     except:
-        return f"🗣 AI 트레이너: '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
+        return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
 @st.cache_data(ttl=3600)
 def get_ai_workout_feedback(user_name, total_sets, total_vol, api_key):
-    if not api_key: return f"🗣 트레이너: '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
+    if not api_key or not api_key.startswith("AIzaSy"): 
+        return f"🗣 (기본 모드) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
     
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    prompt = f"너는 AI 트레이너야. '{user_name}' 회원이 방금 운동을 마쳤어. 오늘 총 {total_sets}세트를 수행했고, 총 볼륨은 {total_vol}kg이야. 수고했다는 칭찬과 함께 다음 운동을 기대하게 만드는 짧은 피드백 2문장을 써줘."
     try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        prompt = f"너는 AI 트레이너야. '{user_name}' 회원이 방금 운동을 마쳤어. 오늘 총 {total_sets}세트를 수행했고, 총 볼륨은 {total_vol}kg이야. 수고했다는 칭찬과 함께 다음 운동을 기대하게 만드는 짧은 피드백 2문장을 써줘."
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
     except:
-        return f"🗣 AI 트레이너: '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
+        return f"🗣 (시스템) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
 
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
@@ -66,7 +56,7 @@ FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
     "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
-    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋️️ 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
+    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋️ 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
     "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
 }
 
@@ -128,7 +118,7 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-# 🔥 [FRD M04 반영] 한층 풍부해진 회원별 맞춤형 루틴 및 추천 근거 DB
+# 🔥 실시간 DB 연동을 위한 전역 변수 (세션 꼬임 방지)
 ROUTINE_DB = {
     "박수민": {
         "theme": "🔥 하체 볼륨업 (근력 증가)",
@@ -144,13 +134,13 @@ ROUTINE_DB = {
         "reason": "최근 벤치프레스 중량(75kg)이 3주째 정체되어 있습니다. 오늘은 인클라인과 덤벨 위주로 자극점을 바꿔 근신경계를 깨워보겠습니다.",
         "routines": [
             {"id": 0, "부위": "워밍업", "기구": "사이클", "목표": "강도 3 가볍게 페달링", "시간": "10분", "완료": False, "상태": "대기"},
-            {"id": 1, "부위": "가슴", "기구": "벤치프레스", "목표": "70kg x 12회 (4세트) - 중량 하향", "시간": "15분", "완료": False, "상태": "대기"},
+            {"id": 1, "부위": "가슴", "기구": "벤치프레스", "목표": "70kg x 12회 (4세트) - 하향", "시간": "15분", "완료": False, "상태": "대기"},
             {"id": 2, "부위": "가슴", "기구": "인클라인 벤치", "목표": "50kg x 12회 (3세트)", "시간": "12분", "완료": False, "상태": "대기"}
         ]
     },
     "default": {
         "theme": "🏃 전신 순환 및 밸런스",
-        "reason": "운동 이력이 충분하지 않아, 오늘은 전신을 골고루 자극하며 기초 체력을 기르는 안전한 루틴을 구성했습니다.",
+        "reason": "최근 운동 이력이 충분하지 않아, 오늘은 전신을 골고루 자극하며 기초 체력을 기르는 안전한 루틴을 구성했습니다.",
         "routines": [
             {"id": 0, "부위": "워밍업", "기구": "트레드밀", "목표": "속도 5.5", "시간": "10분", "완료": False, "상태": "대기"},
             {"id": 1, "부위": "가슴", "기구": "체스트 프레스", "목표": "20kg x 15회 (3세트)", "시간": "10분", "완료": False, "상태": "대기"},
@@ -162,14 +152,12 @@ ROUTINE_DB = {
 def reset_routine(user_name):
     import copy
     db_entry = ROUTINE_DB.get(user_name, ROUTINE_DB["default"])
-    st.session_state['routine_theme'] = db_entry["theme"]
-    st.session_state['routine_reason'] = db_entry["reason"]
     st.session_state['my_routine'] = copy.deepcopy(db_entry["routines"])
 
 if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
 
 # ==========================================
-# 3. 🎨 커스텀 CSS
+# 3. 🎨 커스텀 CSS 
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -205,10 +193,8 @@ def inject_custom_css():
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         button[kind="primary"] { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
         button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4) !important; color: #111111 !important; }
-        button[kind="primary"]:active { color: #111111 !important; }
         button[kind="secondary"] { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
         button[kind="secondary"]:hover { transform: translateY(-2px); background-color: rgba(0, 242, 254, 0.2) !important; border-color: #00f2fe !important; color: #ffffff !important; }
-        button[kind="secondary"]:active { color: #ffffff !important; }
         </style>
         """, unsafe_allow_html=True)
         
@@ -233,6 +219,7 @@ def member_app():
     
     with st.sidebar.expander("⚙️ AI 설정 (관리자용)"):
         input_key = st.text_input("Gemini API Key 입력", value=st.session_state['gemini_api_key'], type="password")
+        st.caption("※ 정상적인 키는 'AIzaSy...' 로 시작합니다.")
         if st.button("API 연동 확인"):
             if input_key:
                 st.session_state['gemini_api_key'] = input_key
@@ -294,14 +281,14 @@ def member_app():
             if not st.session_state.get('ai_mode', True):
                 st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
-                theme = st.session_state.get('routine_theme', '')
-                reason = st.session_state.get('routine_reason', '')
+                # 🔥 세션 꼬임 방지: DB에서 직접 테마와 근거 호출
+                db_entry = ROUTINE_DB.get(current_user_name, ROUTINE_DB["default"])
+                theme = db_entry["theme"]
+                reason = db_entry["reason"]
                 
-                # 🔥 향상된 AI 코칭 멘트 생성 (테마 연동)
                 ai_msg = get_ai_greeting(current_user_name, theme, st.session_state['gemini_api_key'])
                 st.success(ai_msg)
                 
-                # 🔥 [FRD M04] 추천 테마와 추천 근거 노출 UI 추가
                 st.markdown(f"#### 🎯 오늘의 추천 테마: **{theme}**")
                 st.info(f"💡 **AI 추천 근거:** {reason}")
                 
@@ -314,9 +301,7 @@ def member_app():
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         status_mark = "✅" if r.get('완료', False) else ("⏭️" if r.get('상태', '대기') == "건너뜀" else "⬜")
-                        # 기구명 출력
                         st.markdown(f"**{status_mark} [{r.get('부위', '')}] {r.get('기구', '')}**")
-                        # 세부 목표 및 소요 시간 캡션 출력
                         st.caption(f"🔹 목표: {r.get('목표', '')} | ⏱️ 예상 소요: {r.get('시간', '10분')}")
                     with col2:
                         if not r.get('완료', False) and r.get('상태', '대기') != "건너뜀":
@@ -379,7 +364,7 @@ def member_app():
                     if st.session_state['today_records']:
                         df_today = pd.DataFrame(st.session_state['today_records'])
                         st.dataframe(df_today, use_container_width=True)
-                        if st.button("🗑️️ 마지막 기록 삭제"):
+                        if st.button("🗑️ 마지막 기록 삭제"):
                             st.session_state['today_records'].pop()
                             st.rerun()
                     else:
@@ -397,7 +382,6 @@ def member_app():
                         st.rerun()
 
         elif menu == "📈 4. 리포트 및 오운완(종료)":
-            
             if st.session_state['workout_state'] == "완료":
                 st.markdown("### 📸 M18. 오운완 (오늘 운동 완료)")
                 total_sets = len(st.session_state['today_records'])
