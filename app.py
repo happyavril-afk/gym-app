@@ -16,7 +16,7 @@ SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 통신 실패 시 구동을 보장하는 예비(Fallback) 데이터 
+# [안전장치] 통신 실패 및 시트 오입력 시 투입되는 예비(Fallback) 데이터 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
@@ -26,7 +26,7 @@ FALLBACK_DATA = {
 }
 
 @st.cache_data(ttl=30)
-def fetch_data(url, fallback_key):
+def fetch_data(url, fallback_key, required_col=None):
     try:
         if "http" in url:
             df = pd.read_csv(url)
@@ -41,6 +41,10 @@ def fetch_data(url, fallback_key):
             df = df.dropna(how='all')
             if '티겟분류' in df.columns:
                 df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
+                
+            if required_col and required_col not in df.columns:
+                raise ValueError(f"엉뚱한 데이터 섞임 (필수 컬럼 '{required_col}' 없음)")
+                
             return df
     except Exception as e:
         print(f"Fetch Error [{fallback_key}]: {e}")
@@ -49,10 +53,10 @@ def fetch_data(url, fallback_key):
     fallback_df.columns = fallback_df.columns.str.strip()
     return fallback_df
 
-# 데이터 로딩
-df_members = fetch_data(SHEET_URL_MEMBER_ANALYTICS, "member")
-history_df = fetch_data(SHEET_URL_WORKOUT_HISTORY, "workout")
-heatmap_df = fetch_data(SHEET_URL_HEATMAP, "heatmap")
+df_members = fetch_data(SHEET_URL_MEMBER_ANALYTICS, "member", "회원명")
+history_df = fetch_data(SHEET_URL_WORKOUT_HISTORY, "workout", "날짜")
+heatmap_df = fetch_data(SHEET_URL_HEATMAP, "heatmap", "시간")
+
 df_qna_init = fetch_data(SHEET_URL_QNA, "qna").fillna("")
 df_fac_init = fetch_data(SHEET_URL_FACILITY, "facility").fillna("")
 
@@ -129,11 +133,19 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
         
     elif st.session_state['role'] == 'OWNER':
+        # 🔥 점주 앱 UI 전용 버튼 토글 CSS 디자인 추가
         st.markdown("""
         <style>
         .stApp { background-color: #F4F7F9; }
         .corp-card { background-color: #ffffff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 5px solid #2563EB; margin-bottom: 20px; }
-        .stButton>button { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; }
+        
+        /* Primary 버튼 (선택된 기구) : 파란색 색상 표기 */
+        button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: all 0.2s; }
+        button[kind="primary"]:hover { opacity: 0.8; }
+        
+        /* Secondary 버튼 (선택 안 된 기구) : 하얀 바탕 적용 */
+        button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 500 !important; transition: all 0.2s; }
+        button[kind="secondary"]:hover { border-color: #2563EB !important; color: #2563EB !important; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -250,7 +262,7 @@ def member_app():
                 else:
                     st.info("아직 운동 기록이 없습니다. 오늘 첫 운동을 시작해 보세요!")
             else:
-                st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다.")
+                st.warning("🚨 데이터 구조 오류: 시트에 잘못된 데이터가 붙여넣기 되었습니다. 예비 데이터를 출력합니다.")
             
             st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 꾸준히 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
@@ -344,22 +356,49 @@ def owner_app():
 
     elif menu == "🏢 Epic 5. 기구별 혼잡도 분석":
         st.title("🏢 Epic 5. 기구별 맞춤 혼잡도 분석")
+        
+        if '시간' not in heatmap_df.columns:
+            st.error("🚨 앗! 구글 시트 3번째 탭(혼잡도)에 잘못된 데이터가 붙여넣기 된 것 같습니다. 탭 내용을 확인해주세요.")
+            
         st.write("구글 스프레드시트의 시간대별 점유율 데이터를 기반으로 시각화합니다.")
         
         machine_columns = [col for col in heatmap_df.columns if col != "시간"]
         
-        # 🔥 에러 완전 방어: 기본값을 동적으로 할당
-        preferred_defaults = ["파워 랙 (웨이트)", "트레드밀 (유산소)"]
-        valid_defaults = [m for m in preferred_defaults if m in machine_columns]
+        # 🔥 세션 스테이트 초기화 (최초 접속 시 '파워 랙', '트레드밀' 기본 활성화)
+        if 'active_machines' not in st.session_state:
+            preferred = ["파워 랙 (웨이트)", "트레드밀 (유산소)"]
+            st.session_state.active_machines = [m for m in preferred if m in machine_columns]
+            if not st.session_state.active_machines and machine_columns:
+                st.session_state.active_machines = machine_columns[:2]
         
-        # 만약 시트 컬럼 이름이 바뀌어서 valid_defaults가 비어있다면, 있는 기구 중 처음 2개를 선택
-        if not valid_defaults and len(machine_columns) > 0:
-            valid_defaults = machine_columns[:min(2, len(machine_columns))]
-            
-        selected_machines = st.multiselect("조회할 기구 선택:", options=machine_columns, default=valid_defaults)
+        # 구글 시트 기구 컬럼이 변경될 경우를 대비한 정리 로직
+        st.session_state.active_machines = [m for m in st.session_state.active_machines if m in machine_columns]
+        
+        st.markdown("**조회할 기구 선택 (다중 선택 가능):**")
+        
+        # 🔥 기구명 리스트를 나열형 토글 버튼(Toggle Buttons) 형태로 구성
+        if machine_columns:
+            # 기구 수만큼 열(Columns) 생성하여 가로로 균등하게 배치
+            cols = st.columns(len(machine_columns))
+            for idx, machine in enumerate(machine_columns):
+                is_active = machine in st.session_state.active_machines
+                
+                # 활성화 상태면 Primary(파란색), 비활성화면 Secondary(흰색)
+                btn_style = "primary" if is_active else "secondary"
+                
+                with cols[idx]:
+                    if st.button(machine, type=btn_style, use_container_width=True, key=f"btn_mac_{idx}"):
+                        # 버튼 클릭 시 리스트에 추가/제거 및 즉시 갱신
+                        if is_active:
+                            st.session_state.active_machines.remove(machine)
+                        else:
+                            st.session_state.active_machines.append(machine)
+                        st.rerun()
+                        
+        selected_machines = st.session_state.active_machines
         
         if not selected_machines:
-            st.warning("조회할 기구를 최소 1개 이상 선택해주세요.")
+            st.warning("선택된 기구가 없습니다. 위 버튼을 눌러 기구를 선택해주세요.")
         elif '시간' in heatmap_df.columns:
             cols_to_keep = ["시간"] + selected_machines
             filtered_df = heatmap_df[cols_to_keep]
