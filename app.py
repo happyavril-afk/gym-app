@@ -16,9 +16,9 @@ SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 통신 실패, 권한 오류, 형식 오류 시 즉시 투입될 '풍부한 예비 데이터'
+# [안전장치] 통신 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터 (새 컬럼 반영 완료)
 FALLBACK_DATA = {
-    "member": "회원명,잔여일,주평균방문,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,45,1.2,-15,없음,0,88,이탈위험\n박지민,120,1.5,-10,없음,0,75,이탈위험\n이광수,150,4.5,12,없음,0,5,VIP\n송지효,210,5.1,22,없음,0,2,VIP\n최운식,180,3.0,2,스쿼트,4,25,정체기\n전소민,60,2.5,0,숄더 프레스,3,40,정체기",
+    "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n08.20,하체,레그 프레스,100,10,3,3000\n08.22,가슴,벤치프레스,60,12,4,2880\n08.25,등,랫풀다운,45,15,3,2025\n08.28,하체,스쿼트,80,10,4,3200\n09.01,어깨,숄더 프레스,30,12,3,1080\n09.05,가슴,체스트 프레스,50,15,3,2250",
     "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
     "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋️ 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
@@ -31,21 +31,19 @@ def fetch_data(url, fallback_key):
         if "http" in url:
             df = pd.read_csv(url)
             
-            # 🚨 오류 복구 1: 구글 시트 권한이 '비공개'라서 로그인 HTML 페이지가 잡힌 경우
+            # HTML 응답 방어
             if not df.empty and len(df.columns) > 0 and '<html' in str(df.columns[0]).lower():
-                raise ValueError("시트 접근 권한 제한됨 (HTML 반환)")
+                raise ValueError("시트 접근 권한 제한됨")
 
-            # 🚨 오류 복구 2: 열 분할이 안 되고 콤마(,)로 뭉쳐있는 경우 강제 분할
+            # 콤마 뭉침 방어
             if len(df.columns) == 1 and ',' in df.columns[0]:
                 col_name = df.columns[0]
                 raw_text = col_name + '\n' + '\n'.join(df[col_name].astype(str).tolist())
                 df = pd.read_csv(io.StringIO(raw_text))
             
-            # 🚨 오류 복구 3: 열 이름(Header)에 있는 앞뒤 공백 무조건 제거 (' 날짜 ' -> '날짜')
             df.columns = df.columns.str.strip()
             df = df.dropna(how='all')
             
-            # 오타 자동 보정
             if '티겟분류' in df.columns:
                 df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
                 
@@ -54,7 +52,7 @@ def fetch_data(url, fallback_key):
         print(f"Fetch Error [{fallback_key}]: {e}")
         pass
     
-    # 💡 모든 예외 발생 시, 안전한 예비(Fallback) 데이터를 강제 투입하여 화면 구동 보장
+    # 예외 시 폴백 반환
     fallback_df = pd.read_csv(io.StringIO(FALLBACK_DATA[fallback_key]))
     fallback_df.columns = fallback_df.columns.str.strip()
     return fallback_df
@@ -66,7 +64,7 @@ heatmap_df = fetch_data(SHEET_URL_HEATMAP, "heatmap")
 df_qna_init = fetch_data(SHEET_URL_QNA, "qna").fillna("")
 df_fac_init = fetch_data(SHEET_URL_FACILITY, "facility").fillna("")
 
-# 타겟별 데이터 분리
+# 타겟별 데이터 분리 (새로운 컬럼 유지)
 if '타겟분류' in df_members.columns:
     churn_df = df_members[df_members['타겟분류'] == '이탈위험'].drop(columns=['타겟분류', '정체종목', '정체기간(주)'], errors='ignore')
     vip_df = df_members[df_members['타겟분류'] == 'VIP'].drop(columns=['타겟분류', '정체종목', '정체기간(주)', '이탈확률(%)'], errors='ignore')
@@ -85,7 +83,7 @@ if 'logged_in' not in st.session_state:
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
     
-# 에러 방지용 상태 초기화
+# 상태 초기화
 if 'qna_db' not in st.session_state:
     qna_records = df_qna_init.to_dict('records')
     for r in qna_records:
@@ -236,7 +234,7 @@ def member_app():
             else:
                 st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다. 권한을 확인해주세요.")
             
-            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 상승했습니다.'")
+            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 꾸준히 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
 
         elif menu == "💬 5. 소통 및 신고함":
@@ -351,7 +349,7 @@ def owner_app():
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
     elif menu == "🛠️ Epic 7. 시설 민원 관리":
-        st.title("🛠️ Epic 7. 실시간 민원 트래킹")
+        st.title("🛠️️ Epic 7. 실시간 민원 트래킹")
         for i, f in enumerate(st.session_state['facility_db']):
             with st.expander(f"[{f.get('상태', '')}] {f.get('위치', '')} - {f.get('신고자', '')}"):
                 st.write(f"민원: {f.get('내용', '')}")
