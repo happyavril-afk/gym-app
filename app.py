@@ -14,10 +14,10 @@ SHEET_ID = "1Kf_FrZIoagIXkZIH1dO14fKPpgbLk85qDDM_r4zfno8"
 # 💡 중요: 각 시트(탭)를 클릭했을 때 주소창 맨 끝에 나오는 'gid=숫자'를 아래에 정확히 적어주세요!
 # (기본적으로 첫 번째 시트의 gid는 0입니다.)
 SHEET_URL_MEMBER_ANALYTICS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0" # 1. 회원 분석 탭 (gid=0)
-SHEET_URL_WORKOUT_HISTORY  = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=111111" # 2. 운동 이력 탭 (숫자 변경 필요)
-SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=222222" # 3. 혼잡도 탭 (숫자 변경 필요)
-SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=333333" # 4. Q&A 탭 (숫자 변경 필요)
-SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=444444" # 5. 민원 탭 (숫자 변경 필요)
+SHEET_URL_WORKOUT_HISTORY  = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=991554144" # 2. 운동 이력 탭 (숫자 변경 필요)
+SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=347441251" # 3. 혼잡도 탭 (숫자 변경 필요)
+SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" # 4. Q&A 탭 (숫자 변경 필요)
+SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" # 5. 민원 탭 (숫자 변경 필요)
 
 # [안전장치] 구글 시트 접근 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터
 FALLBACK_DATA = {
