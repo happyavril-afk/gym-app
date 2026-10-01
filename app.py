@@ -16,7 +16,7 @@ SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 통신 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터 (새 컬럼 반영 완료)
+# [안전장치] 통신 실패 시 앱 구동을 보장하는 예비(Fallback) 데이터 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n08.20,하체,레그 프레스,100,10,3,3000\n08.22,가슴,벤치프레스,60,12,4,2880\n08.25,등,랫풀다운,45,15,3,2025\n08.28,하체,스쿼트,80,10,4,3200\n09.01,어깨,숄더 프레스,30,12,3,1080\n09.05,가슴,체스트 프레스,50,15,3,2250",
@@ -64,7 +64,7 @@ heatmap_df = fetch_data(SHEET_URL_HEATMAP, "heatmap")
 df_qna_init = fetch_data(SHEET_URL_QNA, "qna").fillna("")
 df_fac_init = fetch_data(SHEET_URL_FACILITY, "facility").fillna("")
 
-# 타겟별 데이터 분리 (새로운 컬럼 유지)
+# 타겟별 데이터 분리
 if '타겟분류' in df_members.columns:
     churn_df = df_members[df_members['타겟분류'] == '이탈위험'].drop(columns=['타겟분류', '정체종목', '정체기간(주)'], errors='ignore')
     vip_df = df_members[df_members['타겟분류'] == 'VIP'].drop(columns=['타겟분류', '정체종목', '정체기간(주)', '이탈확률(%)'], errors='ignore')
@@ -211,24 +211,46 @@ def member_app():
             st.markdown("### 📈 M16. 누적 총 볼륨 성장 추이 (스프레드시트 연동)")
             
             if '날짜' in history_df.columns:
+                # 🔥 차트 다크 테마 완벽 동기화 및 시인성 극대화
                 base = alt.Chart(history_df).encode(
-                    x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45, title='날짜', grid=False)),
-                    y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False), axis=alt.Axis(title='총 볼륨(kg)', grid=True, gridColor='rgba(255,255,255,0.1)')),
+                    x=alt.X('날짜:O', sort=None, axis=alt.Axis(
+                        labelAngle=-45, title='날짜', grid=False, 
+                        labelColor='white', titleColor='white' # X축 글자 화이트
+                    )),
+                    y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False), axis=alt.Axis(
+                        title='총 볼륨(kg)', grid=True, gridColor='rgba(255,255,255,0.2)', 
+                        labelColor='white', titleColor='white' # Y축 글자 화이트 및 은은한 그리드
+                    )),
                     tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
                 )
+                
                 area = base.mark_area(
                     color=alt.Gradient(
                         gradient='linear',
-                        stops=[alt.GradientStop(color='rgba(0, 242, 254, 0.5)', offset=0), 
-                               alt.GradientStop(color='rgba(0, 242, 254, 0.01)', offset=1)],
+                        stops=[alt.GradientStop(color='rgba(0, 242, 254, 0.6)', offset=0), 
+                               alt.GradientStop(color='rgba(0, 242, 254, 0.05)', offset=1)],
                         x1=1, x2=1, y1=0, y2=1
                     )
                 )
-                line = base.mark_line(color='#00f2fe', strokeWidth=3, interpolate='monotone')
-                points = base.mark_circle(color='#ccff00', size=80, opacity=1)
                 
-                chart_history = (area + line + points).properties(height=350)
-                st.altair_chart(chart_history, use_container_width=True)
+                line = base.mark_line(color='#00f2fe', strokeWidth=3, interpolate='monotone')
+                
+                # 점에 테두리(Stroke)를 주어 배경 묻힘 방지
+                points = base.mark_circle(color='#ccff00', size=70, opacity=1, stroke='white', strokeWidth=1)
+                
+                chart_history = (area + line + points).properties(
+                    height=350
+                ).configure(
+                    background='transparent' # 🔥 배경을 투명하게 날려 다크 CSS 테마와 일체화
+                ).configure_view(
+                    strokeWidth=0
+                ).configure_axis(
+                    domainColor='rgba(255,255,255,0.3)',
+                    tickColor='rgba(255,255,255,0.3)'
+                )
+                
+                # theme=None 을 명시하여 Streamlit 기본 화이트 테마 강제 해제
+                st.altair_chart(chart_history, use_container_width=True, theme=None) 
                 
                 with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
             else:
@@ -349,7 +371,7 @@ def owner_app():
         st.dataframe(privacy_df, hide_index=True, use_container_width=True)
 
     elif menu == "🛠️ Epic 7. 시설 민원 관리":
-        st.title("🛠️️ Epic 7. 실시간 민원 트래킹")
+        st.title("🛠 Epic 7. 실시간 민원 트래킹")
         for i, f in enumerate(st.session_state['facility_db']):
             with st.expander(f"[{f.get('상태', '')}] {f.get('위치', '')} - {f.get('신고자', '')}"):
                 st.write(f"민원: {f.get('내용', '')}")
