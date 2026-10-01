@@ -91,21 +91,24 @@ def reset_routine():
 if 'my_routine' not in st.session_state: reset_routine()
 
 # ==========================================
-# 3. 🎨 커스텀 CSS (시인성 문제 전면 수정)
+# 3. 🎨 커스텀 CSS (완벽한 시인성 & Hover 액션 보완)
 # ==========================================
 def inject_custom_css():
-    # 1) 공통 폰트 및 UI 설정
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800;900&display=swap');
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff'); font-weight: 500; }
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff'); font-weight: 700; }
-    p, h1, h2, h3, h4, h5, h6, label, li, a, button, b, strong, svg text, canvas { font-family: 'GmarketSans', 'Montserrat', sans-serif !important; letter-spacing: -0.5px; }
+    
+    p, h1, h2, h3, h4, h5, h6, label, li, a, button, svg text, canvas { font-family: 'GmarketSans', 'Montserrat', sans-serif !important; letter-spacing: -0.5px; }
+    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td { font-family: 'GmarketSans', sans-serif !important; }
+    
+    /* 사이드바 글자색 강제 고정 */
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #1e293b !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    # 2) 로그인 안 했을 때 (메인 화면)
+    # ------------------ 로그인(메인) 화면 ------------------
     if not st.session_state['logged_in']:
         st.markdown("""
         <style>
@@ -113,7 +116,7 @@ def inject_custom_css():
         .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(4rem, 10vw, 8rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
         .hero-subtitle { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
         
-        /* 🔥 메인 화면 버튼 시인성 대폭 개선 */
+        /* 🔥 로그인 버튼: 크기 확대, 반투명 검정 배경, 글자색 고정형 Hover 애니메이션 */
         .stButton>button { 
             border-radius: 20px !important; 
             font-size: clamp(1.5rem, 3vw, 2.5rem) !important; 
@@ -121,50 +124,68 @@ def inject_custom_css():
             padding: 2rem 1rem !important; 
             border: 3px solid #ccff00 !important; 
             color: #ccff00 !important; 
-            background: rgba(0, 0, 0, 0.7) !important; /* 반투명 검은색 배경 추가 */
+            background: rgba(0, 0, 0, 0.7) !important; 
             backdrop-filter: blur(10px); 
             height: auto !important; 
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s !important;
         }
-        .stButton>button:hover { background: #ccff00 !important; color: #111 !important; transform: scale(1.05); }
+        .stButton>button:hover { 
+            background-color: rgba(204, 255, 0, 0.15) !important; 
+            transform: translateY(-5px); 
+            color: #ccff00 !important; 
+            box-shadow: 0 10px 20px rgba(204,255,0,0.3) !important;
+        }
+        .stButton>button:active { color: #ccff00 !important; }
         </style>
         """, unsafe_allow_html=True)
 
-    # 3) 회원(MEMBER) 화면
+    # ------------------ 회원(MEMBER) 화면 ------------------
     elif st.session_state['role'] == 'MEMBER':
         st.markdown("""
         <style>
         .stApp { background-color: #0f172a !important; }
-        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] label, [data-testid="stMain"] li { color: #ffffff !important; }
+        
+        /* 🔥 바탕색 대비 모든 텍스트 완전 화이트로 강제 고정 */
+        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #ffffff !important; }
+        
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
-        .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: white !important;}
-        .stButton>button { border-radius: 12px !important; font-weight: 800 !important; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111 !important; border: none !important;}
+        .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: #ffffff !important;}
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        
+        /* 🔥 B2C Primary 버튼 (파란색 그라데이션) */
+        button[kind="primary"] { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+        button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4) !important; color: #111111 !important; }
+        button[kind="primary"]:active { color: #111111 !important; }
+        
+        /* 🔥 B2C Secondary 버튼 (건너뛰기/변경 등) - 흰색 테두리와 어두운 배경 */
+        button[kind="secondary"] { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
+        button[kind="secondary"]:hover { transform: translateY(-2px); background-color: rgba(0, 242, 254, 0.2) !important; border-color: #00f2fe !important; color: #ffffff !important; }
+        button[kind="secondary"]:active { color: #ffffff !important; }
+        button[kind="secondary"]:focus { color: #ffffff !important; }
         </style>
         """, unsafe_allow_html=True)
         
-    # 4) 점주(OWNER) 화면
+    # ------------------ 점주(OWNER) 화면 ------------------
     elif st.session_state['role'] == 'OWNER':
         st.markdown("""
         <style>
         .stApp { background-color: #F4F7F9 !important; }
         
-        /* 🔥 점주 화면 모든 글자/제목 색상 강제 지정 (흰색 묻힘 방지) */
-        [data-testid="stMain"] p, 
-        [data-testid="stMain"] h1, 
-        [data-testid="stMain"] h2, 
-        [data-testid="stMain"] h3, 
-        [data-testid="stMain"] h4,
-        [data-testid="stMain"] span, 
-        [data-testid="stMain"] label { 
-            color: #1e293b !important; 
-        }
+        /* 🔥 바탕색 대비 모든 텍스트 진한 네이비색으로 강제 고정 */
+        [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #1e293b !important; }
         
         .corp-card { background-color: #ffffff !important; border-radius: 12px; padding: 20px; border-left: 5px solid #2563EB; margin-bottom: 20px; color: #1e293b !important;}
         
-        button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: all 0.2s; }
-        button[kind="primary"]:hover { opacity: 0.8; }
-        button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 500 !important; transition: all 0.2s; }
-        button[kind="secondary"]:hover { border-color: #2563EB !important; color: #2563EB !important; }
+        /* 🔥 B2B Primary 버튼 (짙은 파란색) */
+        button[kind="primary"] { background-color: #2563EB !important; color: #ffffff !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+        button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3) !important; color: #ffffff !important; }
+        button[kind="primary"]:active { color: #ffffff !important; }
+        
+        /* 🔥 B2B Secondary 버튼 (토글 등) - 하얀색 배경 */
+        button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
+        button[kind="secondary"]:hover { transform: translateY(-2px); background-color: #eff6ff !important; border-color: #2563EB !important; color: #1e293b !important; }
+        button[kind="secondary"]:active { color: #1e293b !important; }
+        button[kind="secondary"]:focus { color: #1e293b !important; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -204,7 +225,7 @@ def member_app():
     _, col_main, _ = st.columns([1, 2, 1])
     with col_main:
         st.markdown("<div class='insta-gradient-text'>FITPASS PRO</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='profile-card'><b>@{current_user_name}_workout</b>님, 환영합니다!<br><span style='color:#00f2fe;'>운동 상태: {st.session_state['workout_state']}</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='profile-card'><b style='color:#ffffff;'>@{current_user_name}_workout</b>님, 환영합니다!<br><span style='color:#00f2fe !important;'>운동 상태: {st.session_state['workout_state']}</span></div>", unsafe_allow_html=True)
         
         if menu == "📊 1. 인바디 및 목표 설정":
             st.markdown("### 📊 M02. 인바디 업로드 및 분석")
@@ -317,13 +338,12 @@ def member_app():
                         st.rerun()
 
         elif menu == "📈 4. 리포트 및 오운완(종료)":
-            
             if st.session_state['workout_state'] == "완료":
                 st.markdown("### 📸 M18. 오운완 (오늘 운동 완료)")
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
-                st.info(f"🗣️️ 트레이너: '{current_user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 수행하셨네요.'")
+                st.info(f"🗣 트레이너: '{current_user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 수행하셨네요.'")
                 
                 card_html = f"""
                 <div class='owoonwan-card'>
@@ -376,7 +396,7 @@ def member_app():
                 for q in st.session_state['qna_db']:
                     if current_user_name in q.get('회원명', ''): 
                         with st.expander(f"[#{q.get('id', 0)}] {q.get('상태', '대기중')} - {q.get('유형', '')}"): 
-                            st.write(f"🙋‍♂️ 질문: {q.get('내용', '')}")
+                            st.write(f"🙋‍♂️️ 질문: {q.get('내용', '')}")
                             if q.get('상태') == '답변완료':
                                 st.info(f"👨‍🏫 담당자 답변: {q.get('답변', '')}")
             with tab2:
@@ -537,7 +557,6 @@ def main():
             st.markdown("<div class='login-card'>", unsafe_allow_html=True)
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                # 버튼 크기가 대폭 커지고 시인성이 확보되었습니다.
                 if st.button("👟 회원 시연 접속", use_container_width=True):
                     st.session_state['logged_in'] = True; st.session_state['role'] = 'MEMBER'; st.rerun()
             with col_b2:
