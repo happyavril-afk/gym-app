@@ -8,15 +8,15 @@ from datetime import datetime
 import google.generativeai as genai
 
 # ==========================================
-# 0. 🤖 Gemini AI 안전 설정
+# 0. 🤖 Gemini AI 설정 (검증 로직 수정)
 # ==========================================
 if 'gemini_api_key' not in st.session_state:
     st.session_state['gemini_api_key'] = ""
 
 @st.cache_data(ttl=3600) 
 def get_ai_greeting(user_name, routine_theme, api_key):
-    # 키가 없거나 정상적인 Gemini 키(AIzaSy...)가 아니면 방어 로직 작동
-    if not api_key or not api_key.startswith("AIzaSy"): 
+    # 키가 없거나 비어있을 때만 기본 모드 작동 (시작 문자열 검증 로직 제거)
+    if not api_key or len(api_key) < 10: 
         return f"🗣 (기본 모드) '{user_name}님, 오늘의 테마는 [{routine_theme}]입니다! 부상 없이 파이팅해봐요!'"
     
     try:
@@ -25,12 +25,13 @@ def get_ai_greeting(user_name, routine_theme, api_key):
         prompt = f"너는 친절하고 전문적인 헬스장 AI 트레이너야. 회원이름은 '{user_name}'이고, 오늘 운동 테마는 '{routine_theme}'야. 이 회원에게 오늘 이 테마를 추천하는 이유를 살짝 섞어서, 파이팅 넘치고 경쾌한 코칭 멘트 2~3문장을 작성해줘. 이모지도 적절히 써줘."
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
-    except:
-        return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
+    except Exception as e:
+        # 에러 발생 시 로그를 남기지 않고 조용히 Fallback
+        return f"🗣 (AI 연결 중...) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
 @st.cache_data(ttl=3600)
 def get_ai_workout_feedback(user_name, total_sets, total_vol, api_key):
-    if not api_key or not api_key.startswith("AIzaSy"): 
+    if not api_key or len(api_key) < 10: 
         return f"🗣 (기본 모드) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
     
     try:
@@ -39,8 +40,8 @@ def get_ai_workout_feedback(user_name, total_sets, total_vol, api_key):
         prompt = f"너는 AI 트레이너야. '{user_name}' 회원이 방금 운동을 마쳤어. 오늘 총 {total_sets}세트를 수행했고, 총 볼륨은 {total_vol}kg이야. 수고했다는 칭찬과 함께 다음 운동을 기대하게 만드는 짧은 피드백 2문장을 써줘."
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
-    except:
-        return f"🗣 (시스템) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
+    except Exception as e:
+        return f"🗣 (AI 연결 중...) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
 
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
@@ -56,7 +57,7 @@ FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
     "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
-    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋️ 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
+    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
     "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
 }
 
@@ -118,7 +119,7 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-# 🔥 실시간 DB 연동을 위한 전역 변수 (세션 꼬임 방지)
+# 🔥 실시간 DB 연동을 위한 전역 변수
 ROUTINE_DB = {
     "박수민": {
         "theme": "🔥 하체 볼륨업 (근력 증가)",
@@ -217,9 +218,9 @@ def inject_custom_css():
 def member_app():
     st.sidebar.markdown("**👟 회원 (B2C) 제어판**")
     
-    with st.sidebar.expander("⚙️ AI 설정 (관리자용)"):
+    with st.sidebar.expander("⚙️️ AI 설정 (관리자용)"):
         input_key = st.text_input("Gemini API Key 입력", value=st.session_state['gemini_api_key'], type="password")
-        st.caption("※ 정상적인 키는 'AIzaSy...' 로 시작합니다.")
+        st.caption("※ 정상적인 키는 'AQ...' 등으로 시작할 수 있습니다.")
         if st.button("API 연동 확인"):
             if input_key:
                 st.session_state['gemini_api_key'] = input_key
@@ -279,9 +280,8 @@ def member_app():
             st.markdown("### 🤖 M03. AI 트레이너 추천 루틴")
             
             if not st.session_state.get('ai_mode', True):
-                st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
+                st.warning("⚠️️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
-                # 🔥 세션 꼬임 방지: DB에서 직접 테마와 근거 호출
                 db_entry = ROUTINE_DB.get(current_user_name, ROUTINE_DB["default"])
                 theme = db_entry["theme"]
                 reason = db_entry["reason"]
@@ -452,7 +452,7 @@ def member_app():
                     st.toast("신고 접수 완료!")
                     st.rerun()
             with tab3:
-                st.markdown("#### ⚙️ 알림 및 개인화 설정")
+                st.markdown("#### ⚙️️ 알림 및 개인화 설정")
                 st.toggle("🔔 필수 서비스 알림 (운동 리마인드 등)", value=True)
                 st.toggle("💌 선택 마케팅 알림 (이벤트, 혜택 등)", value=True)
                 ai_mode = st.toggle("🤖 AI 개인화 추천 모드 사용", value=st.session_state.get('ai_mode', True), help="끄시면 기본 모드로 전환됩니다.")
