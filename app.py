@@ -8,10 +8,9 @@ from datetime import datetime
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
 # ==========================================
-# 💡 대표님의 실제 구글 시트 ID
 SHEET_ID = "1Kf_FrZIoagIXkZIH1dO14fKPpgbLk85qDDM_r4zfno8"
 
-# 알려주신 각 시트별 고유 번호(gid) 반영 완료
+# 💡 업데이트된 시트 고유 번호(gid) 완벽 적용
 SHEET_URL_MEMBER_ANALYTICS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 SHEET_URL_WORKOUT_HISTORY  = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=991554144" 
 SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=347441251" 
@@ -32,13 +31,13 @@ def fetch_data(url, fallback_key):
     try:
         if "http" in url:
             df = pd.read_csv(url)
-            # 🔥 핵심 에러 방지 로직: 구글 시트에서 '열로 분할'을 안 해서 1개의 열로 다 뭉쳐버렸을 때 자동 복구
+            # 콤마로 뭉쳐버렸을 때 자동 복구 (정규화 방탄 로직)
             if len(df.columns) == 1 and ',' in df.columns[0]:
                 col_name = df.columns[0]
                 raw_text = col_name + '\n' + '\n'.join(df[col_name].astype(str).tolist())
                 df = pd.read_csv(io.StringIO(raw_text))
             
-            # 오타 자동 보정 로직 (티겟분류 -> 타겟분류)
+            # 오타 자동 보정 로직
             if '티겟분류' in df.columns:
                 df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
                 
@@ -55,7 +54,7 @@ heatmap_df = fetch_data(SHEET_URL_HEATMAP, "heatmap")
 df_qna_init = fetch_data(SHEET_URL_QNA, "qna").fillna("")
 df_fac_init = fetch_data(SHEET_URL_FACILITY, "facility").fillna("")
 
-# 타겟별로 데이터 분리 (컬럼이 정상적으로 존재할 때만)
+# 타겟별 데이터 분리
 if '타겟분류' in df_members.columns:
     churn_df = df_members[df_members['타겟분류'] == '이탈위험'].drop(columns=['타겟분류', '정체종목', '정체기간(주)'], errors='ignore')
     vip_df = df_members[df_members['타겟분류'] == 'VIP'].drop(columns=['타겟분류', '정체종목', '정체기간(주)', '이탈확률(%)'], errors='ignore')
@@ -74,10 +73,9 @@ if 'logged_in' not in st.session_state:
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
     
-# 에러 방지용 안전한 상태 초기화
+# 에러 방지용 상태 초기화
 if 'qna_db' not in st.session_state:
     qna_records = df_qna_init.to_dict('records')
-    # 만약 시트 내용이 잘못되어 '상태' 컬럼이 없다면 강제로 추가
     for r in qna_records:
         if '상태' not in r: r['상태'] = '대기중'
     st.session_state['qna_db'] = qna_records
@@ -107,14 +105,30 @@ def inject_custom_css():
     """, unsafe_allow_html=True)
 
     if not st.session_state['logged_in']:
+        # 🔥 메인 화면 반투명 영역 삭제 및 버튼 대폭 확대 UI 업데이트
         st.markdown("""
         <style>
-        .stApp { background-image: linear-gradient(rgba(10, 10, 12, 0.65), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop'); background-size: cover; background-position: center; }
-        .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(2.5rem, 10vw, 5.5rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; white-space: nowrap; }
-        .hero-subtitle { font-size: clamp(1rem, 4vw, 1.6rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 60px; }
-        .login-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border-radius: 20px; padding: clamp(20px, 5vw, 40px); }
-        .stButton>button { border-radius: 30px !important; font-weight: 900 !important; border: 2px solid #ccff00 !important; color: #ccff00 !important; background: transparent !important; }
-        .stButton>button:hover { background: #ccff00 !important; color: #111 !important; }
+        .stApp { background-image: linear-gradient(rgba(10, 10, 12, 0.55), rgba(10, 10, 12, 0.85)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070&auto=format&fit=crop'); background-size: cover; background-position: center; }
+        .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(3rem, 12vw, 7rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; white-space: nowrap; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        .hero-subtitle { font-size: clamp(1.2rem, 5vw, 2.2rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        
+        /* 반투명 박스 삭제 */
+        .login-card { background: transparent !important; border: none !important; box-shadow: none !important; padding: 0 !important; }
+        
+        /* 🚀 메인 버튼 크기 대폭 상향 */
+        .stButton>button { 
+            border-radius: 20px !important; 
+            font-size: clamp(1.4rem, 4vw, 2rem) !important; 
+            font-weight: 900 !important; 
+            padding: 2.5rem 1rem !important; 
+            border: 3px solid #ccff00 !important; 
+            color: #ccff00 !important; 
+            background: rgba(0, 0, 0, 0.6) !important; 
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease !important;
+            height: auto !important;
+        }
+        .stButton>button:hover { background: #ccff00 !important; color: #111 !important; transform: scale(1.03); }
         </style>
         """, unsafe_allow_html=True)
 
@@ -125,7 +139,7 @@ def inject_custom_css():
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons), [data-testid="stMain"] label, [data-testid="stMain"] li { color: #ffffff !important; }
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
         .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; }
-        .stButton>button { border-radius: 20px !important; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111 !important; border: none !important; font-weight: 800 !important; }
+        .stButton>button { border-radius: 20px !important; background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111 !important; border: none !important; font-weight: 800 !important; padding: 1.2rem !important; font-size: 1.2rem !important; height: auto !important;}
         </style>
         """, unsafe_allow_html=True)
         
@@ -203,12 +217,28 @@ def member_app():
             st.markdown("### 📈 M16. 누적 총 볼륨 성장 추이 (스프레드시트 연동)")
             
             if '날짜' in history_df.columns:
-                chart_history = alt.Chart(history_df).mark_line(point=True, color='#00f2fe').encode(
-                    x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45)),
-                    y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False)),
+                # 🔥 M16 차트 고도화 (그라데이션 영역, 곡선 라인, 네온 포인트 적용)
+                base = alt.Chart(history_df).encode(
+                    x=alt.X('날짜:O', sort=None, axis=alt.Axis(labelAngle=-45, title='날짜', grid=False)),
+                    y=alt.Y('총 볼륨(kg):Q', scale=alt.Scale(zero=False), axis=alt.Axis(title='총 볼륨(kg)', grid=True, gridColor='rgba(255,255,255,0.1)')),
                     tooltip=['날짜', '운동 부위', '주요 기구', '총 볼륨(kg)']
-                ).properties(height=300)
+                )
+                
+                # 영역(그라데이션) + 곡선 라인 + 포인트 겹치기
+                area = base.mark_area(
+                    color=alt.Gradient(
+                        gradient='linear',
+                        stops=[alt.GradientStop(color='rgba(0, 242, 254, 0.5)', offset=0), 
+                               alt.GradientStop(color='rgba(0, 242, 254, 0.01)', offset=1)],
+                        x1=1, x2=1, y1=0, y2=1
+                    )
+                )
+                line = base.mark_line(color='#00f2fe', strokeWidth=3, interpolate='monotone')
+                points = base.mark_circle(color='#ccff00', size=80, opacity=1)
+                
+                chart_history = (area + line + points).properties(height=350)
                 st.altair_chart(chart_history, use_container_width=True)
+                
                 with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
             else:
                 st.warning("데이터 분할 에러: 기록 탭을 찾을 수 없습니다.")
@@ -225,7 +255,7 @@ def member_app():
                     st.session_state['qna_db'].insert(0, {"id": len(st.session_state['qna_db'])+1, "시간": "방금전", "회원명": "박수민(본인)", "유형": q_cat, "내용": q_text, "상태": "대기중", "답변": ""})
                     st.toast("접수 완료!")
                     st.rerun()
-                for q in st.session_state['qna_db']:
+                for i, q in enumerate(st.session_state['qna_db']):
                     with st.expander(f"[{q.get('상태', '대기중')}] {q.get('유형', '')}"): st.write(f"Q: {q.get('내용', '')}\nA: {q.get('답변', '')}")
             with tab2:
                 f_loc = st.selectbox("위치", ["프리웨이트존", "유산소존", "탈의실"])
@@ -234,7 +264,7 @@ def member_app():
                     st.session_state['facility_db'].insert(0, {"id": len(st.session_state['facility_db'])+1, "시간": "방금전", "신고자": "박수민(본인)", "위치": f_loc, "내용": f_text, "상태": "접수됨", "답변": ""})
                     st.toast("신고 접수 완료!")
                     st.rerun()
-                for f in st.session_state['facility_db']:
+                for i, f in enumerate(st.session_state['facility_db']):
                     with st.expander(f"[{f.get('상태', '접수됨')}] {f.get('위치', '')}"): st.write(f"{f.get('내용', '')}\n(조치: {f.get('답변', '')})")
 
 # ==========================================
@@ -273,11 +303,9 @@ def owner_app():
 
     elif menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
-        
         if not churn_df.empty and '이탈확률(%)' in churn_df.columns:
             st.altair_chart(alt.Chart(churn_df).mark_bar(color='#2563EB').encode(x=alt.X('이탈확률(%):Q', axis=alt.Axis(title='이탈 확률(%)')), y=alt.Y('회원명:N', sort='-x', axis=alt.Axis(title='회원명')), tooltip=['회원명', '이탈확률(%)']).properties(height=300), use_container_width=True)
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
-        
         msg_template = st.text_area("맞춤형 복귀 유도 알림톡 템플릿", "회원님, 최근 방문이 뜸하시네요! 이번 주 오시면 혜택을 드립니다.")
         if st.button("일괄 자동 컨택 발송 (Epic 1-2)", type="primary"): st.toast("이탈 위험군 전체 메시지 발송 완료")
 
@@ -293,28 +321,26 @@ def owner_app():
 
     elif menu == "💬 Epic 4. Q&A 및 소통":
         st.title("💬 Epic 4. 1:1 질문함 실시간 연동")
-        for q in st.session_state['qna_db']:
+        # 🔥 에러 방지 고유 키(i) 반영
+        for i, q in enumerate(st.session_state['qna_db']):
             if q.get('상태') == '대기중':
                 with st.expander(f"[대기중] {q.get('유형', '')} - {q.get('회원명', '')}", expanded=True):
                     st.write(f"Q. {q.get('내용', '')}")
-                    reply = st.text_area("답장 작성", key=f"ans_{q.get('id', 0)}")
-                    if st.button("답장 발송", key=f"btn_{q.get('id', 0)}", type="primary"):
+                    reply = st.text_area("답장 작성", key=f"ans_{i}_{q.get('id', 0)}")
+                    if st.button("답장 발송", key=f"btn_{i}_{q.get('id', 0)}", type="primary"):
                         q['상태'] = '답변완료'; q['답변'] = reply; st.rerun()
 
     elif menu == "🏢 Epic 5. 기구별 혼잡도 분석":
         st.title("🏢 Epic 5. 기구별 맞춤 혼잡도 분석")
         st.write("구글 스프레드시트의 시간대별 점유율 데이터를 기반으로 시각화합니다.")
-        
         machine_columns = [col for col in heatmap_df.columns if col != "시간"]
         selected_machines = st.multiselect("조회할 기구 선택:", options=machine_columns, default=["파워 랙 (웨이트)", "트레드밀 (유산소)"] if len(machine_columns) > 1 else machine_columns)
-        
         if not selected_machines:
             st.warning("조회할 기구를 최소 1개 이상 선택해주세요.")
         elif '시간' in heatmap_df.columns:
             cols_to_keep = ["시간"] + selected_machines
             filtered_df = heatmap_df[cols_to_keep]
             df_melt = filtered_df.melt('시간', var_name='기구', value_name='사용량(%)')
-            
             chart = alt.Chart(df_melt).mark_area(opacity=0.6).encode(
                 x=alt.X('시간:O', axis=alt.Axis(labelAngle=0, title='시간대')), 
                 y=alt.Y('사용량(%):Q', stack=None, axis=alt.Axis(title='누적 점유율(%)')), 
@@ -334,15 +360,16 @@ def owner_app():
 
     elif menu == "🛠️ Epic 7. 시설 민원 관리":
         st.title("🛠️ Epic 7. 실시간 민원 트래킹")
-        for f in st.session_state['facility_db']:
+        # 🔥 에러 방지 고유 키(i) 완벽 반영 
+        for i, f in enumerate(st.session_state['facility_db']):
             with st.expander(f"[{f.get('상태', '')}] {f.get('위치', '')} - {f.get('신고자', '')}"):
                 st.write(f"민원: {f.get('내용', '')}")
                 col1, col2 = st.columns([1, 3])
                 status_list = ["접수됨", "조치중", "조치완료"]
                 idx = status_list.index(f['상태']) if f.get('상태') in status_list else 0
-                with col1: status = st.selectbox("상태", status_list, index=idx, key=f"f_stat_{f.get('id', 0)}")
-                with col2: reply = st.text_input("결과", f.get('답변', ''), key=f"f_rep_{f.get('id', 0)}")
-                if st.button("저장", key=f"f_btn_{f.get('id', 0)}", type="primary"):
+                with col1: status = st.selectbox("상태", status_list, index=idx, key=f"f_stat_{i}_{f.get('id', 0)}")
+                with col2: reply = st.text_input("결과", f.get('답변', ''), key=f"f_rep_{i}_{f.get('id', 0)}")
+                if st.button("저장", key=f"f_btn_{i}_{f.get('id', 0)}", type="primary"):
                     f['상태'] = status; f['답변'] = reply; st.rerun()
 
     elif menu == "🎉 Epic 8. 이벤트 홍보":
@@ -379,10 +406,10 @@ def main():
             st.markdown("<div class='login-card'>", unsafe_allow_html=True)
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("👟 회원 (B2C) 시연 접속", use_container_width=True):
+                if st.button("👟 회원 시연 접속", use_container_width=True):
                     st.session_state['logged_in'] = True; st.session_state['role'] = 'MEMBER'; st.rerun()
             with col_b2:
-                if st.button("💼 총괄 점주 (B2B) 시연 접속", use_container_width=True):
+                if st.button("💼 점주 시연 접속", use_container_width=True):
                     st.session_state['logged_in'] = True; st.session_state['role'] = 'OWNER'; st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
     else:
