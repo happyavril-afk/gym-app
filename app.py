@@ -10,18 +10,17 @@ from datetime import datetime
 # ==========================================
 SHEET_ID = "1Kf_FrZIoagIXkZIH1dO14fKPpgbLk85qDDM_r4zfno8"
 
-# 💡 최신 시트 고유 번호(gid)
 SHEET_URL_MEMBER_ANALYTICS = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 SHEET_URL_WORKOUT_HISTORY  = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=991554144" 
 SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=347441251" 
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 폴백 데이터
+# [안전장치] 통신 실패, 권한 오류, 형식 오류 시 즉시 투입될 '풍부한 예비 데이터'
 FALLBACK_DATA = {
-    "member": "회원명,잔여일,주평균방문,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,45,1.2,-15,없음,0,88,이탈위험\n이광수,150,4.5,12,없음,0,5,VIP\n최운식,180,3.0,2,스쿼트,4,25,정체기",
-    "workout": "날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n08.20,하체,레그 프레스,100,10,3,3000\n08.22,가슴,벤치프레스,60,12,4,2880",
-    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25",
+    "member": "회원명,잔여일,주평균방문,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,45,1.2,-15,없음,0,88,이탈위험\n박지민,120,1.5,-10,없음,0,75,이탈위험\n이광수,150,4.5,12,없음,0,5,VIP\n송지효,210,5.1,22,없음,0,2,VIP\n최운식,180,3.0,2,스쿼트,4,25,정체기\n전소민,60,2.5,0,숄더 프레스,3,40,정체기",
+    "workout": "날짜,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n08.20,하체,레그 프레스,100,10,3,3000\n08.22,가슴,벤치프레스,60,12,4,2880\n08.25,등,랫풀다운,45,15,3,2025\n08.28,하체,스쿼트,80,10,4,3200\n09.01,어깨,숄더 프레스,30,12,3,1080\n09.05,가슴,체스트 프레스,50,15,3,2250",
+    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
     "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋️ 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
     "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
 }
@@ -30,18 +29,35 @@ FALLBACK_DATA = {
 def fetch_data(url, fallback_key):
     try:
         if "http" in url:
-            # 💡 구글 시트가 정상 표 형태이므로 단순하고 강력하게 읽어옴
             df = pd.read_csv(url)
             
-            # 오타 자동 보정 로직 (시트에 혹시 남아있을 오타 대비)
+            # 🚨 오류 복구 1: 구글 시트 권한이 '비공개'라서 로그인 HTML 페이지가 잡힌 경우
+            if not df.empty and len(df.columns) > 0 and '<html' in str(df.columns[0]).lower():
+                raise ValueError("시트 접근 권한 제한됨 (HTML 반환)")
+
+            # 🚨 오류 복구 2: 열 분할이 안 되고 콤마(,)로 뭉쳐있는 경우 강제 분할
+            if len(df.columns) == 1 and ',' in df.columns[0]:
+                col_name = df.columns[0]
+                raw_text = col_name + '\n' + '\n'.join(df[col_name].astype(str).tolist())
+                df = pd.read_csv(io.StringIO(raw_text))
+            
+            # 🚨 오류 복구 3: 열 이름(Header)에 있는 앞뒤 공백 무조건 제거 (' 날짜 ' -> '날짜')
+            df.columns = df.columns.str.strip()
+            df = df.dropna(how='all')
+            
+            # 오타 자동 보정
             if '티겟분류' in df.columns:
                 df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
                 
             return df
     except Exception as e:
-        print(f"Fetch Error: {e}")
+        print(f"Fetch Error [{fallback_key}]: {e}")
         pass
-    return pd.read_csv(io.StringIO(FALLBACK_DATA[fallback_key]))
+    
+    # 💡 모든 예외 발생 시, 안전한 예비(Fallback) 데이터를 강제 투입하여 화면 구동 보장
+    fallback_df = pd.read_csv(io.StringIO(FALLBACK_DATA[fallback_key]))
+    fallback_df.columns = fallback_df.columns.str.strip()
+    return fallback_df
 
 # 데이터 로딩
 df_members = fetch_data(SHEET_URL_MEMBER_ANALYTICS, "member")
@@ -69,7 +85,7 @@ if 'logged_in' not in st.session_state:
 if 'msg_history' not in st.session_state:
     st.session_state['msg_history'] = []
     
-# 상태 초기화
+# 에러 방지용 상태 초기화
 if 'qna_db' not in st.session_state:
     qna_records = df_qna_init.to_dict('records')
     for r in qna_records:
@@ -218,7 +234,7 @@ def member_app():
                 
                 with st.expander("📝 전체 기록 상세 보기"): st.dataframe(history_df.sort_values(by="날짜", ascending=False), hide_index=True, use_container_width=True)
             else:
-                st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다.")
+                st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다. 권한을 확인해주세요.")
             
             st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
