@@ -77,13 +77,11 @@ if 'facility_db' not in st.session_state:
         if '상태' not in r: r['상태'] = '접수됨'
     st.session_state['facility_db'] = fac_records
 
-# 🔥 회원용(MEMBER) 세션 상태 초기화 (FRD 고도화)
 if 'current_user' not in st.session_state: st.session_state['current_user'] = "박수민"
 if 'workout_state' not in st.session_state: st.session_state['workout_state'] = "준비" 
-if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True # M23 개인화 모드 
-if 'today_records' not in st.session_state: st.session_state['today_records'] = [] # M09 세트 누적 기록용
+if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
+if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-# M03 초기 루틴 설정
 def reset_routine():
     st.session_state['my_routine'] = [
         {"id": 0, "부위": "워밍업", "기구": "트레드밀", "목표": "10분", "완료": False, "상태": "대기"},
@@ -172,30 +170,30 @@ def member_app():
         elif menu == "🚀 2. 오늘의 처방 (AI 루틴)":
             st.markdown("### 🤖 M03. AI 트레이너 추천 루틴")
             
-            # 🔥 [FRD 반영] M23: 개인화 모드 토글 반영
-            if not st.session_state['ai_mode']:
+            if not st.session_state.get('ai_mode', True):
                 st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
                 st.success(f"🗣 AI 트레이너: '{current_user_name}님, 지난번 스쿼트 기록이 아주 좋았어요! 오늘은 하체 볼륨을 조금 더 늘려볼까요?'")
                 st.write("---")
                 
-                completed_count = sum(1 for r in st.session_state['my_routine'] if r['완료'])
+                completed_count = sum(1 for r in st.session_state['my_routine'] if r.get('완료', False))
                 st.progress(completed_count / len(st.session_state['my_routine']), text=f"루틴 진행률: {completed_count} / {len(st.session_state['my_routine'])} 완료")
                 
-                # 🔥 [FRD 반영] M05: 건너뛰기(대체) 사유 입력 UI 고도화
+                # 🔥 KeyError 원천 차단: get() 메서드를 사용하여 기존 세션과 충돌 방지
                 for idx, r in enumerate(st.session_state['my_routine']):
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         # 상태 표시 (건너뜀/완료/대기)
-                        status_mark = "✅" if r['완료'] else ("⏭️" if r['상태']=="건너뜀" else "⬜")
-                        st.markdown(f"**{status_mark} [{r['부위']}] {r['기구']}** ({r['목표']})")
+                        status_mark = "✅" if r.get('완료', False) else ("⏭️" if r.get('상태', '대기') == "건너뜀" else "⬜")
+                        st.markdown(f"**{status_mark} [{r.get('부위', '')}] {r.get('기구', '')}** ({r.get('목표', '')})")
                     with col2:
-                        if not r['완료'] and r['상태'] != "건너뜀":
+                        # 완료되지 않았고, 건너뛴 상태가 아닐 때만 버튼 표시
+                        if not r.get('완료', False) and r.get('상태', '대기') != "건너뜀":
                             if st.button("건너뛰기/변경", key=f"rep_{idx}"):
                                 st.session_state[f"show_exp_{idx}"] = not st.session_state.get(f"show_exp_{idx}", False)
                                 st.rerun()
 
-                    if st.session_state.get(f"show_exp_{idx}", False) and not r['완료']:
+                    if st.session_state.get(f"show_exp_{idx}", False) and not r.get('완료', False):
                         with st.container():
                             reason = st.selectbox("건너뛰는 사유를 알려주세요", ["기구 사용 중(대기 김)", "컨디션 저하/통증", "다른 운동으로 대체"], key=f"rsn_{idx}")
                             if st.button("적용하기", key=f"apply_{idx}"):
@@ -234,7 +232,6 @@ def member_app():
                 else:
                     st.info(f"💡 **[{machine_name}] 사용법**\n1. 본인 체형에 맞게 패드를 조절합니다.\n2. 반동 없이 동작을 수행합니다.\n※ 통증 발생 시 즉각 중단하세요.")
                     
-                    # 직전 기록 불러오기 (M08)
                     last_w, last_r = 20, 10 
                     if '회원명' in history_df.columns and not history_df[history_df['회원명'] == current_user_name].empty:
                         past = history_df[(history_df['회원명'] == current_user_name) & (history_df['주요 기구'].str.contains(machine_name, na=False))]
@@ -247,7 +244,6 @@ def member_app():
                     with c1: weight = st.number_input("중량 (kg)", value=last_w, step=5)
                     with c2: reps = st.number_input("반복 횟수", value=last_r, step=1)
                     
-                    # 🔥 [FRD 반영] M09: 세트 누적 기록 및 삭제 기능
                     st.markdown("#### 📊 현재 세트 기록 현황")
                     if st.session_state['today_records']:
                         df_today = pd.DataFrame(st.session_state['today_records'])
@@ -262,7 +258,6 @@ def member_app():
                         st.session_state['today_records'].append({"기구": machine_name, "중량": weight, "횟수": reps})
                         st.toast(f"✅ {machine_name} 1세트 추가됨!")
                         
-                        # M11 휴식 타이머 바
                         bar = st.progress(0, text="⏱️ 60초 휴식 타이머 진행 중...")
                         for p in range(100):
                             time.sleep(0.01) 
@@ -272,7 +267,6 @@ def member_app():
 
         elif menu == "📈 4. 리포트 및 오운완(종료)":
             
-            # 🔥 [FRD 반영] M13/M18: 오늘 운동 종료 및 오운완 카드 생성
             if st.session_state['workout_state'] == "완료":
                 st.markdown("### 📸 M18. 오운완 (오늘 운동 완료)")
                 total_sets = len(st.session_state['today_records'])
@@ -321,11 +315,10 @@ def member_app():
         elif menu == "💬 5. 소통 및 설정함":
             tab1, tab2, tab3 = st.tabs(["💬 M21. 1:1 질문", "🛠️ M20. 시설 신고", "⚙️ M22. 환경설정"])
             with tab1:
-                # 🔥 [FRD 반영] M21: Q&A 접수번호 생성 로직
                 q_cat = st.selectbox("문의 유형", ["운동 피드백", "PT 문의", "기타"])
                 q_text = st.text_area("질문 내용")
                 if st.button("질문 전송"): 
-                    new_id = len(st.session_state['qna_db']) + 101 # 접수번호 시각화
+                    new_id = len(st.session_state['qna_db']) + 101 
                     st.session_state['qna_db'].insert(0, {"id": new_id, "시간": "방금전", "회원명": f"{current_user_name}(본인)", "유형": q_cat, "내용": q_text, "상태": "대기중", "답변": ""})
                     st.toast(f"접수 완료! (접수번호: #{new_id})")
                     st.rerun()
@@ -346,9 +339,8 @@ def member_app():
                 st.markdown("#### ⚙️ 알림 및 개인화 설정")
                 st.toggle("🔔 필수 서비스 알림 (운동 리마인드 등)", value=True)
                 st.toggle("💌 선택 마케팅 알림 (이벤트, 혜택 등)", value=True)
-                # 🔥 [FRD 반영] M23: AI 개인화 추천 모드 토글
-                ai_mode = st.toggle("🤖 AI 개인화 추천 모드 사용", value=st.session_state['ai_mode'], help="끄시면 기본 모드로 전환됩니다.")
-                if ai_mode != st.session_state['ai_mode']:
+                ai_mode = st.toggle("🤖 AI 개인화 추천 모드 사용", value=st.session_state.get('ai_mode', True), help="끄시면 기본 모드로 전환됩니다.")
+                if ai_mode != st.session_state.get('ai_mode', True):
                     st.session_state['ai_mode'] = ai_mode
                     st.rerun()
 
@@ -382,6 +374,10 @@ def owner_app():
         c1.metric("🚨 신규 이탈 위험군", f"{len(churn_df)}명", "조치 필요")
         c2.metric("💬 미답변 1:1 질문", f"{pending_qna}건", "대기중")
         c3.metric("🛠️ 신규 시설 민원", f"{pending_fac}건", "확인 요망")
+        c4, c5, c6 = st.columns(3)
+        c4.metric("🏆 신규 우수 회원", f"{len(vip_df)}명", "+2명")
+        c5.metric("🌱 초기 정착 필요", "8명", "플랜 수립")
+        c6.metric("🎯 정체기 돌파 시급", f"{len(sales_df)}명", "PT 제안 타겟")
 
     elif menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
