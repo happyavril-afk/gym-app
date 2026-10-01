@@ -25,7 +25,7 @@ FALLBACK_DATA = {
     "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
 }
 
-@st.cache_data(ttl=30)
+@st.cache_data(ttl=600)
 def fetch_data(url, fallback_key, required_col=None):
     try:
         if "http" in url:
