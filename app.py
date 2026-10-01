@@ -16,7 +16,7 @@ SHEET_URL_HEATMAP          = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 SHEET_URL_QNA              = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=522963216" 
 SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=808495575" 
 
-# [안전장치] 통신 실패 시 구동을 보장하는 예비(Fallback) 데이터 (회원명 포함)
+# [안전장치] 통신 실패 시 구동을 보장하는 예비(Fallback) 데이터 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
     "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
@@ -150,7 +150,6 @@ def member_app():
         "💬 5. 소통 및 신고함"
     ])
 
-    # 💡 현재 로그인한 회원의 이름 (시연용 고정값)
     current_user_name = "박수민"
 
     _, col_main, _ = st.columns([1, 2, 1])
@@ -184,9 +183,30 @@ def member_app():
 
         elif menu == "📡 3. 기구 스캔 (NFC 기록)":
             st.markdown("### 📡 M06. NFC 태그 시뮬레이터")
-            machine = st.selectbox("기구를 태그하세요:", ["기구 대기 중...", "파워 랙 (스쿼트)", "벤치프레스 머신", "랫풀다운", "트레드밀 (유산소)"])
-            if machine != "기구 대기 중...":
+            
+            # 🔥 시각적인 아이콘 추가로 직관성 극대화
+            machine_options = [
+                "📱 기구 대기 중 (태그해주세요)...", 
+                "🏋️ 파워 랙 (스쿼트/하체)", 
+                "💺 벤치프레스 머신 (가슴)", 
+                "💪 랫풀다운 (등)", 
+                "🏃 트레드밀 (유산소)"
+            ]
+            machine = st.selectbox("가상 NFC 태그 시뮬레이터:", machine_options)
+            
+            if machine != "📱 기구 대기 중 (태그해주세요)...":
+                # 🔥 기구별 대표 이미지 매핑 (디자인 시인성 향상)
+                if "파워 랙" in machine:
+                    st.image("https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop", use_container_width=True)
+                elif "벤치프레스" in machine:
+                    st.image("https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470&auto=format&fit=crop", use_container_width=True)
+                elif "랫풀다운" in machine:
+                    st.image("https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470&auto=format&fit=crop", use_container_width=True)
+                elif "유산소" in machine:
+                    st.image("https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1470&auto=format&fit=crop", use_container_width=True)
+                
                 st.info(f"✅ {machine} 인식 완료")
+                
                 if "유산소" in machine:
                     st.write("🏃 웨어러블 심박수 연동 중... (데모 데이터)")
                     st.metric("현재 심박수", "125 bpm")
@@ -204,7 +224,6 @@ def member_app():
             st.progress(0.75, text="주간 방문 목표: 4회 중 3회 완료 (75%)")
             st.markdown("### 📈 M16. 나의 누적 볼륨 성장 추이")
             
-            # 🔥 핵심 로직: 수많은 기록 중 '로그인한 회원(본인)'의 기록만 필터링!
             if '회원명' in history_df.columns and '날짜' in history_df.columns:
                 my_history_df = history_df[history_df['회원명'] == current_user_name].copy()
                 
@@ -235,7 +254,7 @@ def member_app():
             else:
                 st.warning("데이터 통신 지연: 일시적으로 기록 탭을 불러올 수 없습니다.")
             
-            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 상승했습니다.'")
+            st.info("🗣️ M17. 트레이너 주간 피드백: '이번 주 목표 달성이 눈앞입니다! 지난주 대비 하체 볼륨이 꾸준히 상승했습니다.'")
             if st.button("📸 인스타그램 오운완 스토리 공유", use_container_width=True): st.toast("해시태그가 클립보드에 복사되었습니다.")
 
         elif menu == "💬 5. 소통 및 신고함":
@@ -248,7 +267,7 @@ def member_app():
                     st.toast("접수 완료!")
                     st.rerun()
                 for i, q in enumerate(st.session_state['qna_db']):
-                    if current_user_name in q.get('회원명', ''): # 본인 질문만 보기
+                    if current_user_name in q.get('회원명', ''): 
                         with st.expander(f"[{q.get('상태', '대기중')}] {q.get('유형', '')}"): st.write(f"Q: {q.get('내용', '')}\nA: {q.get('답변', '')}")
             with tab2:
                 f_loc = st.selectbox("위치", ["프리웨이트존", "유산소존", "탈의실"])
@@ -258,7 +277,7 @@ def member_app():
                     st.toast("신고 접수 완료!")
                     st.rerun()
                 for i, f in enumerate(st.session_state['facility_db']):
-                    if current_user_name in f.get('신고자', ''): # 본인 신고만 보기
+                    if current_user_name in f.get('신고자', ''): 
                         with st.expander(f"[{f.get('상태', '접수됨')}] {f.get('위치', '')}"): st.write(f"{f.get('내용', '')}\n(조치: {f.get('답변', '')})")
 
 # ==========================================
@@ -312,8 +331,6 @@ def owner_app():
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
         st.dataframe(sales_df, hide_index=True, use_container_width=True)
         if st.button("🎟️ 맞춤형 원포인트 PT 쿠폰 일괄 발송", type="primary"): st.toast("영업 쿠폰 발송 완료")
-        
-        # 💡 B2B 메뉴에서 회원의 운동 이력 DB를 열람할 수 있는 기능 추가
         st.markdown("<br><h4>📊 전체 회원 운동 로그 열람 (B2B 관리자용)</h4>", unsafe_allow_html=True)
         st.dataframe(history_df.sort_values(by="날짜", ascending=False), height=200, use_container_width=True)
 
