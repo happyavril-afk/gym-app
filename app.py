@@ -27,23 +27,26 @@ def get_ai_greeting(user_name, routine_theme, api_key):
     except:
         return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
+# 🔥 [FRD M13 완벽 반영] AI 피드백 제약조건(관찰값 기반, 의학적 판단 배제) 강력 적용
 @st.cache_data(ttl=3600)
 def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
     if not api_key or len(api_key) < 10: 
-        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 수고하셨습니다.'"
+        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 지난번 기록보다 잘 하셨네요. 다음엔 상체부터 시작해볼까요?'"
     
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = (f"너는 AI 트레이너야. '{user_name}' 회원이 오늘 계획된 루틴 {planned_count}개 중 {completed_count}개를 완료했어. "
+        prompt = (f"너는 철저하게 사실 기반으로만 말하는 AI 트레이너야. '{user_name}' 회원이 오늘 계획된 루틴 {planned_count}개 중 {completed_count}개를 완료했어. "
                   f"(오늘 수행한 총 세트는 {total_sets}세트, 볼륨은 {total_vol}kg이야). "
-                  f"1. 반드시 '오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요'라는 사실 기반 관찰값을 포함해서 칭찬해줘. "
-                  f"2. 절대 칼로리, 근력 향상, 건강 개선, 체형 변화 같은 의학적/추측성 멘트를 생성하지 마. "
-                  f"3. 다음 방문에 할 운동 부위(예: 상체, 하체, 코어 등)를 하나 제안하는 내용을 포함해서 총 3문장 이내로 써줘.")
+                  f"다음 4가지 규칙을 무조건 지켜서 3문장 이내로 작성해."
+                  f"1. 시작은 반드시 '오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요'라는 문장으로 시작할 것."
+                  f"2. '지난번 기록보다 반복 횟수(또는 볼륨)가 늘었어요' 와 같이 철저하게 [관찰값] 기반의 칭찬만 할 것."
+                  f"3. 절대 칼로리 소모량, 근력 향상, 체형 변화 등 추측성이나 의학적인 멘트는 금지할 것."
+                  f"4. 마지막 문장은 '다음에는 상체(또는 다른 부위) 운동부터 시작해 볼까요?' 처럼 다음 방문을 제안하며 끝낼 것.")
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
     except:
-        return f"🗣 (시스템) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 수고하셨습니다.'"
+        return f"🗣 (시스템) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요!'"
 
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
@@ -137,7 +140,6 @@ ROUTINE_DB = {
     }
 }
 
-# 🔥 [FRD M07] 기구별 사용법 안내 이미지 및 4단계 스텝 데이터 (정확한 매칭 적용)
 MACHINE_INSTRUCTIONS = {
     "파워 랙 (스쿼트)": {
         "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
@@ -365,11 +367,9 @@ def member_app():
             machine = st.selectbox("가상 NFC 태그 시뮬레이터:", machine_options)
             
             if machine != "📱 기구 대기 중...":
-                # 🔥 [버그 수정 완료] 이름 분리 오류를 해결하여 정확한 키워드로 매핑
-                full_machine_name = machine.split(" ", 1)[1] # 예: "파워 랙 (스쿼트)"
-                search_keyword = full_machine_name.split(" ")[0] # 예: "파워" 또는 "랫풀다운"
+                full_machine_name = machine.split(" ", 1)[1] 
+                search_keyword = full_machine_name.split(" ")[0] 
                 
-                # 1. 기구 사용법 안내 (이미지 포함)
                 m_info = MACHINE_INSTRUCTIONS.get(full_machine_name)
                 if m_info:
                     with st.expander(f"📖 [{full_machine_name}] 사용 가이드 보기", expanded=True):
@@ -379,7 +379,6 @@ def member_app():
                             st.write(step)
                         st.warning("⚠️ **주의:** 통증이나 이상을 느끼면 즉시 운동을 중지하세요.")
                 
-                # 2. 유산소 및 웨이트 분기 처리
                 if "유산소" in machine:
                     st.markdown("---")
                     st.markdown("#### 🏃 웨어러블 디바이스 연동 시연 중...")
