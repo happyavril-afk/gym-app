@@ -109,6 +109,16 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
+# 🔥 [FRD M19A] 코인 및 리워드 세션 상태 초기화
+if 'coins' not in st.session_state: 
+    st.session_state['coins'] = 1200
+if 'coin_history' not in st.session_state:
+    st.session_state['coin_history'] = [
+        {"날짜": "2026.09.28", "내용": "주간 목표 달성", "변동": "+500", "잔액": 1200},
+        {"날짜": "2026.09.25", "내용": "단백질 쉐이크 교환", "변동": "-300", "잔액": 700},
+        {"날짜": "2026.09.20", "내용": "가입 축하금", "변동": "+1000", "잔액": 1000}
+    ]
+
 ROUTINE_DB = {
     "박수민": {
         "theme": "🔥 하체 볼륨업 (근력 증가)",
@@ -203,6 +213,9 @@ def inject_custom_css():
     p, h1, h2, h3, h4, h5, h6, label, li, a, button, svg text, canvas { font-family: 'GmarketSans', 'Montserrat', sans-serif !important; letter-spacing: -0.5px; }
     [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td { font-family: 'GmarketSans', sans-serif !important; }
     [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #1e293b !important; }
+    
+    .reward-card { background: rgba(255, 255, 255, 0.05); border: 1px solid #4facfe; border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; }
+    .coin-text { font-size: 1.5rem; font-weight: bold; color: #ccff00; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -276,18 +289,19 @@ def member_app():
 
     current_user_name = st.session_state['current_user']
     
-    # 사이드바 종료 버튼 유지
     if st.session_state['workout_state'] == "진행중":
         if st.sidebar.button("🏁 오늘 운동 마치기", type="primary"):
             st.session_state['workout_state'] = "완료"
             st.rerun()
 
+    # 🔥 [FRD M19A 반영] 메뉴 구조 개편 (랭킹 및 리워드 탭 추가)
     menu = st.sidebar.radio("📋 메뉴 선택", [
         "📊 1. 인바디 및 목표 설정",
         "🚀 2. 오늘의 처방 (AI 루틴)", 
         "📡 3. 기구 스캔 (기록/타이머)", 
         "📈 4. 리포트 및 오운완(종료)", 
-        "💬 5. 소통 및 설정함"
+        "🏆 5. 랭킹 및 리워드",
+        "💬 6. 소통 및 설정함"
     ])
 
     _, col_main, _ = st.columns([1, 2, 1])
@@ -429,7 +443,6 @@ def member_app():
                         st.info("🔔 휴식 종료! 다음 세트를 준비하세요.")
                         st.rerun()
 
-        # 🔥 [FRD M12 반영] 리포트 탭 진입 시 운동 상태에 따른 흐름 분기 추가
         elif menu == "📈 4. 리포트 및 오운완(종료)":
             if st.session_state['workout_state'] == "준비":
                 st.info("아직 운동을 시작하지 않았습니다. '2. 오늘의 처방' 탭에서 운동을 시작해주세요.")
@@ -457,6 +470,14 @@ def member_app():
                 with col2:
                     if st.button("🚨 최종 종료하고 리포트 보기", type="primary", use_container_width=True):
                         st.session_state['workout_state'] = "완료"
+                        # 🔥 [FRD M19A] 오운완 달성 시 코인 지급
+                        st.session_state['coins'] += 100
+                        st.session_state['coin_history'].insert(0, {
+                            "날짜": datetime.now().strftime("%Y.%m.%d"),
+                            "내용": "오운완 (출석 보상)",
+                            "변동": "+100",
+                            "잔액": st.session_state['coins']
+                        })
                         st.rerun()
                 st.markdown("---")
 
@@ -496,6 +517,7 @@ def member_app():
                     <p style="font-size: 1.1rem;">📅 {datetime.now().strftime('%Y.%m.%d')}</p>
                     <p style="font-size: 1.1rem;">🏋️ 총 볼륨: {total_vol} kg</p>
                     <p style="font-size: 1.1rem;">🔥 달성률: {planned_count}개 중 {completed_count}개 완료</p>
+                    <p style="font-size: 1.2rem; color: #ccff00; margin-top: 10px;">🎁 +100 코인 획득!</p>
                 </div>
                 <br>
                 """
@@ -504,7 +526,6 @@ def member_app():
                     st.toast("✅ 이미지가 클립보드에 복사되었습니다!")
                 st.markdown("---")
 
-            # M14, M16은 상태와 무관하게 항상 표시
             st.markdown("### 🏆 M14. 주간 목표 진행률")
             st.progress(1.0, text="주간 방문 목표: 4회 중 4회 완료 (100%)")
             st.balloons()
@@ -526,7 +547,63 @@ def member_app():
                     st.altair_chart(chart_history, use_container_width=True, theme=None)
                 else: st.info("기록이 없습니다.")
 
-        elif menu == "💬 5. 소통 및 설정함":
+        # 🔥 [FRD M19A 반영] 신규 랭킹 및 리워드 탭
+        elif menu == "🏆 5. 랭킹 및 리워드":
+            tab_rank, tab_reward = st.tabs(["🏆 우리 지점 랭킹", "🎁 리워드 샵 (코인 교환)"])
+            
+            with tab_rank:
+                st.markdown("### 👑 이번 주 명예의 전당")
+                st.caption("※ 주간 방문 횟수 및 총 볼륨을 기준으로 산정됩니다.")
+                
+                # 가상의 랭킹 데이터 (나침반 역할)
+                rank_data = pd.DataFrame({
+                    "순위": ["1위 🥇", "2위 🥈", "3위 🥉", "4위", "5위"],
+                    "회원": ["이광수", "송지효", f"{current_user_name}(나)", "최운식", "김철수"],
+                    "주간 방문(일)": [5, 4, 3, 2, 1],
+                    "주간 누적 볼륨(kg)": [12500, 9800, 8500, 5400, 3200]
+                })
+                st.dataframe(rank_data, hide_index=True, use_container_width=True)
+                
+                st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 2위(송지효)까지 방문 1회 남았습니다! 조금만 더 힘내세요!")
+                if st.button("🔥 1위에게 자극받기 (응원 보내기)"):
+                    st.toast("이광수님에게 응원의 메시지를 보냈습니다!")
+
+            with tab_reward:
+                st.markdown("### 🎁 포인트 교환소")
+                st.markdown(f"<div class='reward-card'>보유 코인: <span class='coin-text'>{st.session_state['coins']} C</span></div>", unsafe_allow_html=True)
+                st.write("모은 코인을 헬스장 제휴 상품으로 교환해 보세요!")
+                
+                # 리워드 아이템 리스트
+                r_col1, r_col2, r_col3 = st.columns(3)
+                
+                def buy_item(item_name, price):
+                    if st.session_state['coins'] >= price:
+                        st.session_state['coins'] -= price
+                        st.session_state['coin_history'].insert(0, {
+                            "날짜": datetime.now().strftime("%Y.%m.%d"),
+                            "내용": f"{item_name} 교환",
+                            "변동": f"-{price}",
+                            "잔액": st.session_state['coins']
+                        })
+                        st.balloons()
+                        st.success(f"🎉 '{item_name}' 교환 성공! 카운터에 교환권을 제시해주세요.")
+                    else:
+                        st.error(f"❌ 코인이 {price - st.session_state['coins']}C 부족합니다.")
+
+                with r_col1:
+                    st.markdown("<div class='reward-card'>🥤<br><b>단백질 쉐이크</b><br>500 C</div>", unsafe_allow_html=True)
+                    if st.button("교환", key="buy_shake", use_container_width=True): buy_item("단백질 쉐이크", 500)
+                with r_col2:
+                    st.markdown("<div class='reward-card'>☕<br><b>아메리카노 1잔</b><br>300 C</div>", unsafe_allow_html=True)
+                    if st.button("교환", key="buy_coffee", use_container_width=True): buy_item("아메리카노 1잔", 300)
+                with r_col3:
+                    st.markdown("<div class='reward-card'>💪<br><b>1:1 PT 1회권</b><br>5,000 C</div>", unsafe_allow_html=True)
+                    if st.button("교환", key="buy_pt", use_container_width=True): buy_item("1:1 PT 1회권", 5000)
+
+                st.markdown("#### 📜 코인 획득 및 사용 내역")
+                st.dataframe(pd.DataFrame(st.session_state['coin_history']), hide_index=True, use_container_width=True)
+
+        elif menu == "💬 6. 소통 및 설정함":
             tab1, tab2, tab3 = st.tabs(["💬 M21. 1:1 질문", "🛠️ M20. 시설 신고", "⚙️ M22. 환경설정"])
             with tab1:
                 q_cat = st.selectbox("문의 유형", ["운동 피드백", "PT 문의", "기타"])
@@ -587,7 +664,7 @@ def owner_app():
         c1, c2, c3 = st.columns(3)
         c1.metric("🚨 신규 이탈 위험군", f"{len(churn_df)}명", "조치 필요")
         c2.metric("💬 미답변 1:1 질문", f"{pending_qna}건", "대기중")
-        c3.metric("🛠️ 신규 시설 민원", f"{pending_fac}건", "확인 요망")
+        c3.metric("🛠️️ 신규 시설 민원", f"{pending_fac}건", "확인 요망")
         c4, c5, c6 = st.columns(3)
         c4.metric("🏆 신규 우수 회원", f"{len(vip_df)}명", "+2명")
         c5.metric("🌱 초기 정착 필요", "8명", "플랜 수립")
