@@ -8,13 +8,12 @@ from datetime import datetime
 import google.generativeai as genai
 
 # ==========================================
-# 0. 🤖 Gemini AI 자동 설정 (Secrets 연동)
+# 0. 🤖 Gemini AI 안전 설정
 # ==========================================
-# Streamlit Secrets에서 API 키를 자동으로 안전하게 불러옵니다.
 if 'gemini_api_key' not in st.session_state:
     try:
-        st.session_state['gemini_api_key'] = st.secrets["GEMINI_API_KEY"]
-    except Exception:
+        st.session_state['gemini_api_key'] = st.secrets.get("GEMINI_API_KEY", "")
+    except:
         st.session_state['gemini_api_key'] = ""
 
 @st.cache_data(ttl=3600) 
@@ -81,10 +80,7 @@ SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
-    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
-    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
-    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
-    "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
+    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600"
 }
 
 @st.cache_data(ttl=600)  
@@ -134,14 +130,15 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-if 'fav_machines' not in st.session_state: st.session_state['fav_machines'] = ["파워 랙 (스쿼트)"] 
-if 'next_workout_promise' not in st.session_state: st.session_state['next_workout_promise'] = None 
-if 'coins' not in st.session_state: st.session_state['coins'] = 1200 
+# 🔥 M22, M24, M25, M26, M27 요구사항을 위한 세션 변수 추가
+if 'reminder_on' not in st.session_state: st.session_state['reminder_on'] = True # M22/M27 연동
+if 'fav_machines' not in st.session_state: st.session_state['fav_machines'] = ["파워 랙 (스쿼트)"] # M25
+if 'next_workout_promise' not in st.session_state: st.session_state['next_workout_promise'] = None # M27
+if 'coins' not in st.session_state: st.session_state['coins'] = 1200 # M19A
 if 'coin_history' not in st.session_state:
     st.session_state['coin_history'] = [
         {"날짜": "2026.09.28", "내용": "주간 목표 달성", "변동": "+500", "잔액": 1200},
-        {"날짜": "2026.09.25", "내용": "단백질 쉐이크 교환", "변동": "-300", "잔액": 700},
-        {"날짜": "2026.09.20", "내용": "가입 축하금", "변동": "+1000", "잔액": 1000}
+        {"날짜": "2026.09.25", "내용": "단백질 쉐이크 교환", "변동": "-300", "잔액": 700}
     ]
 
 ROUTINE_DB = {
@@ -199,7 +196,7 @@ MACHINE_INSTRUCTIONS = {
 
 def reset_routine(user_name):
     import copy
-    db_entry = ROUTINE_DB.get(user_name, ROUTINE_DB.get("박수민"))
+    db_entry = ROUTINE_DB.get(user_name, ROUTINE_DB["default"])
     st.session_state['routine_theme'] = db_entry["theme"]
     st.session_state['routine_reason'] = db_entry["reason"]
     st.session_state['my_routine'] = copy.deepcopy(db_entry["routines"])
@@ -303,9 +300,15 @@ def member_app():
         st.markdown("<div class='insta-gradient-text'>FITPASS PRO</div>", unsafe_allow_html=True)
         st.markdown(f"<div class='profile-card'><b style='color:#ffffff;'>@{current_user_name}_workout</b>님, 환영합니다!<br><span style='color:#00f2fe !important;'>운동 상태: {st.session_state['workout_state']}</span></div>", unsafe_allow_html=True)
         
-        # 🔥 [FRD M27] 홈 화면 상단에 다음 운동 약속 리마인드 배너 노출
-        if st.session_state.get('next_workout_promise'):
-            st.info(f"🔔 **AI 리마인드:** {st.session_state['next_workout_promise']}에 운동이 예약되어 있습니다! 오늘도 파이팅!")
+        # 🔥 [FRD M27] 홈 화면 상단에 다음 운동 약속 리마인드 배너 노출 (M22 연동)
+        if st.session_state.get('next_workout_promise') and st.session_state.get('reminder_on', True):
+            rem_c1, rem_c2 = st.columns([8, 2])
+            with rem_c1:
+                st.info(f"🔔 **AI 리마인드:** {st.session_state['next_workout_promise']}에 운동이 예약되어 있습니다! 상체 운동 어떠세요?")
+            with rem_c2:
+                if st.button("❌ 취소", key="cancel_promise"):
+                    st.session_state['next_workout_promise'] = None
+                    st.rerun()
 
         if menu == "📊 1. 인바디 및 목표 설정":
             st.markdown("### 📊 M02. 인바디 업로드 및 분석")
@@ -376,7 +379,7 @@ def member_app():
         elif menu == "📡 3. 기구 스캔 (기록/타이머)":
             st.markdown("### 📡 M06 & M25. 기구 스캔 및 가이드")
             
-            # 🔥 [FRD M25 반영] 즐겨찾기 빠른 접근 메뉴
+            # 🔥 [FRD M25] 즐겨찾기 빠른 접근 메뉴
             selected_machine = None
             if st.session_state['fav_machines']:
                 fav_sel = st.radio("⭐ 즐겨찾기 기구 빠른 선택 (M25):", ["선택 안 함"] + st.session_state['fav_machines'], horizontal=True)
@@ -390,7 +393,6 @@ def member_app():
                     selected_machine = machine_sel
 
             if selected_machine:
-                # 🔥 [FRD M25] 기구 상세화면에 즐겨찾기 등록/해제 토글 제공
                 is_fav = selected_machine in st.session_state['fav_machines']
                 if st.toggle(f"⭐ '{selected_machine}' 즐겨찾기 설정", value=is_fav):
                     if selected_machine not in st.session_state['fav_machines']:
@@ -419,7 +421,7 @@ def member_app():
                     c2.metric("경과 시간", "25:40")
                     c3.metric("소모 칼로리", "210 kcal")
                     if st.button("유산소 종료 및 저장", use_container_width=True): 
-                        st.session_state['today_records'].append({"기구": selected_machine, "내용": "25분 완료"})
+                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
                     st.markdown("---")
@@ -467,18 +469,14 @@ def member_app():
                 planned_items = st.session_state['my_routine']
                 st.markdown("#### 📋 현재까지 수행 내역 요약")
                 for r in planned_items:
-                    if r.get('완료', False):
-                        st.write(f"✅ **{r.get('기구')}** - 완료")
-                    elif r.get('상태') == '건너뜀':
-                        st.write(f"⏭️ **{r.get('기구')}** - 건너뜀")
-                    else:
-                        st.write(f"⬜ **{r.get('기구')}** - 미완료")
+                    if r.get('완료', False): st.write(f"✅ **{r.get('기구')}** - 완료")
+                    elif r.get('상태') == '건너뜀': st.write(f"⏭️ **{r.get('기구')}** - 건너뜀")
+                    else: st.write(f"⬜ **{r.get('기구')}** - 미완료")
                 
                 st.markdown("<br>", unsafe_allow_html=True)
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button("💪 계속 운동하기", use_container_width=True):
-                        st.toast("기구 스캔 탭으로 이동해주세요.")
+                    if st.button("💪 계속 운동하기", use_container_width=True): st.toast("기구 스캔 탭으로 이동해주세요.")
                 with col2:
                     if st.button("🚨 최종 종료하고 리포트 보기", type="primary", use_container_width=True):
                         st.session_state['workout_state'] = "완료"
@@ -498,15 +496,19 @@ def member_app():
                 ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, st.session_state['gemini_api_key'])
                 st.success(ai_fb)
                 
-                # 🔥 [FRD M27 반영] 다음 운동 약속 및 리마인드 설정
+                # 🔥 [FRD M27] 다음 운동 약속 및 리마인드 설정 (반복 옵션 추가)
                 st.markdown("### 📅 M27. 다음 운동 약속하기")
                 with st.expander("AI 트레이너와 다음 방문일을 약속하고 리마인드를 받아보세요!", expanded=True):
-                    c1, c2 = st.columns(2)
+                    c1, c2, c3 = st.columns(3)
                     with c1: next_date = st.date_input("예정일 선택")
                     with c2: next_time = st.time_input("시간 선택")
+                    with c3: repeat_opt = st.selectbox("반복 설정", ["반복 없음", "매주 반복"])
+                    
                     if st.button("🔔 리마인드 알림 설정", use_container_width=True):
-                        st.session_state['next_workout_promise'] = f"{next_date.strftime('%m월 %d일')} {next_time.strftime('%H:%M')}"
-                        st.toast(f"✅ {st.session_state['next_workout_promise']}에 알림을 보내드릴게요!")
+                        promise_str = f"{next_date.strftime('%m월 %d일')} {next_time.strftime('%H:%M')}"
+                        if repeat_opt == "매주 반복": promise_str += " (매주)"
+                        st.session_state['next_workout_promise'] = promise_str
+                        st.toast(f"✅ {promise_str} 알림 설정 완료! 홈 화면에서 확인 가능합니다.")
 
                 card_html = f"""
                 <div class='owoonwan-card'>
@@ -521,7 +523,7 @@ def member_app():
                 """
                 st.markdown(card_html, unsafe_allow_html=True)
 
-            # 🔥 [FRD M24 반영] 월간/주간 리포트 탭 분리
+            # 🔥 [FRD M24] 월간 리포트 (자주 이용한 기구 명시 보완)
             tab1, tab2 = st.tabs(["📊 주간 및 월간 리포트", "📈 누적 추이"])
             with tab1:
                 st.markdown("#### 🎯 주간 목표 진행률")
@@ -530,7 +532,7 @@ def member_app():
                 st.markdown("#### 📅 M24. 월간 운동 리포트")
                 m_c1, m_c2, m_c3 = st.columns(3)
                 m_c1.metric("이번 달 운동일", "11일", "+3일 (전월대비)")
-                m_c2.metric("자주 한 부위", "하체", "전체 비중 55%")
+                m_c2.metric("자주 한 기구(부위)", "파워 랙 (하체)", "전체 비중 55%")
                 m_c3.metric("목표 달성률", "85%", "15% 증가")
                 
                 monthly_ai = get_ai_monthly_feedback(current_user_name, 11, 8, "하체", st.session_state['gemini_api_key'])
@@ -553,7 +555,7 @@ def member_app():
                         st.altair_chart(chart_history, use_container_width=True, theme=None)
                     else: st.info("기록이 없습니다.")
 
-        # 🔥 [FRD M19A, M26 반영] 랭킹, 리워드 및 배지 통합 탭
+        # 🔥 [FRD M26] 칭호 시스템 보완 추가
         elif menu == "🏆 5. 랭킹 및 리워드":
             tab_rank, tab_reward, tab_badge = st.tabs(["🏆 지점 랭킹", "🎁 코인 샵", "🏅 내 배지(M26)"])
             
@@ -575,19 +577,24 @@ def member_app():
                         st.success(f"🎉 '{item_name}' 교환 성공!")
                     else: st.error("❌ 코인이 부족합니다.")
 
-                r_col1, r_col2 = st.columns(2)
+                r_col1, r_col2, r_col3 = st.columns(3)
                 with r_col1:
                     st.markdown("<div class='reward-card'>🥤 <b>단백질 쉐이크</b><br>500 C</div>", unsafe_allow_html=True)
                     if st.button("교환하기", key="btn1", use_container_width=True): buy_item("단백질 쉐이크", 500)
                 with r_col2:
                     st.markdown("<div class='reward-card'>☕ <b>아메리카노 1잔</b><br>300 C</div>", unsafe_allow_html=True)
                     if st.button("교환하기", key="btn2", use_container_width=True): buy_item("아메리카노 1잔", 300)
+                with r_col3:
+                    st.markdown("<div class='reward-card'>💪 <b>1:1 PT 1회권</b><br>5000 C</div>", unsafe_allow_html=True)
+                    if st.button("교환하기", key="btn3", use_container_width=True): buy_item("1:1 PT 1회권", 5000)
 
                 st.markdown("#### 📜 획득/사용 내역")
                 st.dataframe(pd.DataFrame(st.session_state['coin_history']), hide_index=True, use_container_width=True)
 
             with tab_badge:
                 st.markdown("### 🏅 M26. 운동 게이미피케이션")
+                # 🔥 칭호 부여 기능 추가
+                st.markdown(f"<div class='reward-card' style='border-color:#ccff00;'><span style='color:#ffffff;'>👑 현재 칭호:</span> <span class='coin-text'>꾸준함의 대명사</span></div>", unsafe_allow_html=True)
                 st.write("목표를 달성하고 멋진 칭호와 배지를 모아보세요!")
                 badges = [("🐣", "첫 운동 완료", True), ("🔥", "주간 목표 달성", True), ("🏋️", "최대 볼륨 갱신", True), ("🎯", "월간 목표 달성", False), ("👑", "4주 연속 달성", False)]
                 cols = st.columns(5)
@@ -621,9 +628,14 @@ def member_app():
                     st.rerun()
             with tab3:
                 st.markdown("#### ⚙️ 알림 및 개인화 설정")
-                st.toggle("🔔 필수 서비스 알림 (운동 리마인드 등)", value=True)
+                # 🔥 [FRD M22, M27 연동] 알림 끄기 시 리마인드 작동 안 함
+                rem_on = st.toggle("🔔 필수 서비스 알림 (운동 리마인드 등)", value=st.session_state.get('reminder_on', True))
+                if rem_on != st.session_state.get('reminder_on', True):
+                    st.session_state['reminder_on'] = rem_on
+                    st.rerun()
+                    
                 st.toggle("💌 선택 마케팅 알림 (이벤트, 혜택 등)", value=True)
-                ai_mode = st.toggle("🤖 AI 개인화 추천 모드 사용", value=st.session_state.get('ai_mode', True), help="끄시면 기본 모드로 전환됩니다.")
+                ai_mode = st.toggle("🤖 AI 개인화 추천 모드 사용", value=st.session_state.get('ai_mode', True))
                 if ai_mode != st.session_state.get('ai_mode', True):
                     st.session_state['ai_mode'] = ai_mode
                     st.rerun()
