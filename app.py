@@ -443,7 +443,7 @@ def member_app():
                     c2.metric("경과 시간", "25:40")
                     c3.metric("소모 칼로리", "210 kcal")
                     if st.button("유산소 종료 및 저장", use_container_width=True): 
-                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 완료"})
+                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 40초 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
                     st.markdown("---")
@@ -494,7 +494,7 @@ def member_app():
                     if r.get('완료', False):
                         st.write(f"✅ **{r.get('기구')}** - 완료")
                     elif r.get('상태') == '건너뜀':
-                        st.write(f"⏭️ **{r.get('기구')}** - 건너뜀")
+                        st.write(f"⏭️️ **{r.get('기구')}** - 건너뜀")
                     else:
                         st.write(f"⬜ **{r.get('기구')}** - 미완료")
                 
@@ -602,21 +602,14 @@ def member_app():
                 st.markdown("### 👑 이번 주 명예의 전당")
                 st.caption("※ 주간 방문 횟수 및 총 볼륨을 기준으로 산정됩니다.")
                 
-                # 점주 차트와 통일성을 위해 이탈확률 대신 랭킹 막대그래프 활용
-                rank_df = pd.DataFrame({
+                rank_data = pd.DataFrame({
+                    "순위": ["1위 🥇", "2위 🥈", "3위 🥉", "4위", "5위"],
                     "회원": ["이광수", "송지효", f"{current_user_name}(나)", "최운식", "김철수"],
+                    "주간 방문(일)": [5, 4, 3, 2, 1],
                     "주간 누적 볼륨(kg)": [12500, 9800, 8500, 5400, 3200]
                 })
-                bars = alt.Chart(rank_df).mark_bar(cornerRadiusEnd=4).encode(
-                    x=alt.X('주간 누적 볼륨(kg):Q', title='주간 누적 볼륨 (kg)'),
-                    y=alt.Y('회원:N', sort='-x', title=''),
-                    color=alt.condition(alt.datum.회원 == f"{current_user_name}(나)", alt.value('#ccff00'), alt.value('#4facfe')),
-                    tooltip=['회원', '주간 누적 볼륨(kg)']
-                )
-                text = bars.mark_text(align='left', baseline='middle', dx=5, fontSize=12, fontWeight='bold', color='white').encode(
-                    text=alt.Text('주간 누적 볼륨(kg):Q', format=',')
-                )
-                st.altair_chart((bars + text).properties(height=250), use_container_width=True)
+                st.dataframe(rank_data, hide_index=True, use_container_width=True)
+                
                 st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 조금만 더 힘내세요!")
 
             with tab_reward:
@@ -746,8 +739,8 @@ def owner_app():
                     y=alt.Y('회원명:N', sort='-x', title='위험 회원명', axis=alt.Axis(labelFontSize=13)),
                     color=alt.condition(
                         alt.datum['이탈확률(%)'] >= 80,
-                        alt.value('#EF4444'),  # 80% 이상 빨간색
-                        alt.value('#F59E0B')   # 그 외 주황색
+                        alt.value('#EF4444'), 
+                        alt.value('#F59E0B')   
                     ),
                     tooltip=['회원명', '이탈확률(%)', '잔여일', '볼륨증감률(%)']
                 )
@@ -771,6 +764,7 @@ def owner_app():
         selected_vip = st.multiselect("발송 대상 선택", options=all_members, default=default_vip)
         if st.button("VIP 혜택 메시지 발송", type="primary"): st.toast(f"✅ {len(selected_vip)}명 발송 완료.")
 
+    # 🔥 [Epic 3 보완] 스마트 필터링 및 다중 선택 차트 적용
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
         st.dataframe(sales_df, hide_index=True, use_container_width=True)
@@ -780,8 +774,27 @@ def owner_app():
             if '회원명' in history_df.columns:
                 member_hist = history_df[history_df['회원명'] == target_member].copy()
                 if not member_hist.empty:
-                    line_chart = alt.Chart(member_hist).mark_line(point=True).encode(x=alt.X('날짜:O'), y=alt.Y('중량(kg):Q', scale=alt.Scale(zero=False)), color='주요 기구:N').properties(height=250)
-                    st.altair_chart(line_chart, use_container_width=True)
+                    # 정체종목 자동 선택 로직
+                    plateau_machine = None
+                    if not sales_df[sales_df['회원명'] == target_member].empty and '정체종목' in sales_df.columns:
+                        plateau_machine = sales_df[sales_df['회원명'] == target_member]['정체종목'].iloc[0]
+                    
+                    unique_machines = member_hist['주요 기구'].unique().tolist()
+                    default_machines = [plateau_machine] if plateau_machine in unique_machines else unique_machines[:1]
+                    
+                    selected_machines = st.multiselect("📈 분석할 기구 선택 (정체 종목 위주로 비교하세요):", unique_machines, default=default_machines)
+                    
+                    if selected_machines:
+                        filtered_hist = member_hist[member_hist['주요 기구'].isin(selected_machines)]
+                        line_chart = alt.Chart(filtered_hist).mark_line(point=alt.OverlayMarkDef(size=100), strokeWidth=3).encode(
+                            x=alt.X('날짜:O', axis=alt.Axis(labelAngle=-45)),
+                            y=alt.Y('중량(kg):Q', scale=alt.Scale(zero=False)),
+                            color=alt.Color('주요 기구:N', legend=alt.Legend(orient="bottom", title="")),
+                            tooltip=['날짜', '주요 기구', '중량(kg)', '횟수', '세트']
+                        ).properties(height=350)
+                        st.altair_chart(line_chart, use_container_width=True)
+                        
+                        st.info(f"💡 **PT 영업 팁:** {target_member}님의 '{selected_machines[0]}' 중량이 최근 정체되어 있습니다. 원포인트 레슨이나 새로운 자극(루틴 변경)을 제안하기 좋은 타이밍입니다!")
         st.markdown("---")
         st.dataframe(history_df.sort_values(by="날짜", ascending=False), height=200, use_container_width=True)
 
