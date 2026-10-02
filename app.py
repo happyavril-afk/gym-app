@@ -24,8 +24,8 @@ def get_ai_greeting(user_name, routine_theme, api_key):
         prompt = f"너는 친절하고 전문적인 헬스장 AI 트레이너야. 회원이름은 '{user_name}'이고, 오늘 운동 테마는 '{routine_theme}'야. 이 회원에게 오늘 이 테마를 추천하는 이유를 살짝 섞어서, 파이팅 넘치고 경쾌한 코칭 멘트 2~3문장을 작성해줘. 이모지도 적절히 써줘."
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
-    except Exception as e:
-        return f"🗣 (AI 연결 중...) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
+    except:
+        return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
 @st.cache_data(ttl=3600)
 def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
@@ -42,8 +42,8 @@ def get_ai_workout_feedback(user_name, planned_count, completed_count, total_set
                   f"3. 다음 방문에 할 운동 부위(예: 상체, 하체, 코어 등)를 하나 제안하는 내용을 포함해서 총 3문장 이내로 써줘.")
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
-    except Exception as e:
-        return f"🗣 (AI 연결 중...) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 수고하셨습니다.'"
+    except:
+        return f"🗣 (시스템) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 수고하셨습니다.'"
 
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
@@ -57,19 +57,14 @@ SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
-    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
-    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
-    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
-    "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
+    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600"
 }
 
 @st.cache_data(ttl=600)  
 def fetch_data(url, fallback_key, required_col=None):
     try:
-        if "http" in url:
-            df = pd.read_csv(url)
-            if not df.empty and len(df.columns) > 0 and '<html' in str(df.columns[0]).lower():
-                raise ValueError("시트 접근 권한 제한됨")
+        df = pd.read_csv(url)
+        if not df.empty and len(df.columns) > 0 and '<html' not in str(df.columns[0]).lower():
             if len(df.columns) == 1 and ',' in df.columns[0]:
                 col_name = df.columns[0]
                 raw_text = col_name + '\n' + '\n'.join(df[col_name].astype(str).tolist())
@@ -77,11 +72,11 @@ def fetch_data(url, fallback_key, required_col=None):
             df.columns = df.columns.str.strip()
             df = df.dropna(how='all')
             if '티겟분류' in df.columns: df.rename(columns={'티겟분류': '타겟분류'}, inplace=True)
-            if required_col and required_col not in df.columns: raise ValueError("필수 컬럼 없음")
-            return df
-    except Exception:
+            if not required_col or required_col in df.columns: 
+                return df
+    except:
         pass
-    fallback_df = pd.read_csv(io.StringIO(FALLBACK_DATA[fallback_key]))
+    fallback_df = pd.read_csv(io.StringIO(FALLBACK_DATA.get(fallback_key, "")))
     fallback_df.columns = fallback_df.columns.str.strip()
     return fallback_df
 
@@ -105,17 +100,8 @@ st.set_page_config(page_title="FITPASS PRO", page_icon="⚡", layout="wide")
 
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'role' not in st.session_state: st.session_state['role'] = None
-if 'qna_db' not in st.session_state:
-    qna_records = df_qna_init.to_dict('records')
-    for r in qna_records:
-        if '상태' not in r: r['상태'] = '대기중'
-    st.session_state['qna_db'] = qna_records
-if 'facility_db' not in st.session_state:
-    fac_records = df_fac_init.to_dict('records')
-    for r in fac_records:
-        if '상태' not in r: r['상태'] = '접수됨'
-    st.session_state['facility_db'] = fac_records
-
+if 'qna_db' not in st.session_state: st.session_state['qna_db'] = df_qna_init.to_dict('records')
+if 'facility_db' not in st.session_state: st.session_state['facility_db'] = df_fac_init.to_dict('records')
 if 'current_user' not in st.session_state: st.session_state['current_user'] = "박수민"
 if 'workout_state' not in st.session_state: st.session_state['workout_state'] = "준비" 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
@@ -151,7 +137,7 @@ ROUTINE_DB = {
     }
 }
 
-# 🔥 [FRD M07] 기구별 사용법 안내 이미지 및 4단계 스텝 데이터
+# 🔥 [FRD M07] 기구별 사용법 안내 이미지 및 4단계 스텝 데이터 (정확한 매칭 적용)
 MACHINE_INSTRUCTIONS = {
     "파워 랙 (스쿼트)": {
         "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
@@ -227,7 +213,6 @@ def inject_custom_css():
         .hero-subtitle { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
         .stButton>button { border-radius: 20px !important; font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 900 !important; padding: 2rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(10px); height: auto !important; transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s !important; }
         .stButton>button:hover { background-color: rgba(204, 255, 0, 0.15) !important; transform: translateY(-5px); color: #ccff00 !important; box-shadow: 0 10px 20px rgba(204,255,0,0.3) !important; }
-        .stButton>button:active { color: #ccff00 !important; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -380,33 +365,37 @@ def member_app():
             machine = st.selectbox("가상 NFC 태그 시뮬레이터:", machine_options)
             
             if machine != "📱 기구 대기 중...":
-                machine_name = machine.split(" ")[1] 
+                # 🔥 [버그 수정 완료] 이름 분리 오류를 해결하여 정확한 키워드로 매핑
+                full_machine_name = machine.split(" ", 1)[1] # 예: "파워 랙 (스쿼트)"
+                search_keyword = full_machine_name.split(" ")[0] # 예: "파워" 또는 "랫풀다운"
                 
-                # 🔥 [FRD M07 반영] 기구별 고화질 이미지 및 4단계 사용법 안내 UI
-                m_info = MACHINE_INSTRUCTIONS.get(machine_name)
+                # 1. 기구 사용법 안내 (이미지 포함)
+                m_info = MACHINE_INSTRUCTIONS.get(full_machine_name)
                 if m_info:
-                    with st.expander(f"📖 [{machine_name}] 사용 가이드 보기", expanded=True):
+                    with st.expander(f"📖 [{full_machine_name}] 사용 가이드 보기", expanded=True):
                         st.image(m_info["img"], use_container_width=True)
                         st.markdown(f"**🎯 {m_info['target']}**")
                         for step in m_info["steps"]:
                             st.write(step)
                         st.warning("⚠️ **주의:** 통증이나 이상을 느끼면 즉시 운동을 중지하세요.")
                 
+                # 2. 유산소 및 웨이트 분기 처리
                 if "유산소" in machine:
-                    st.write("🏃 웨어러블 디바이스 연동 시연 중...")
+                    st.markdown("---")
+                    st.markdown("#### 🏃 웨어러블 디바이스 연동 시연 중...")
                     c1, c2, c3 = st.columns(3)
                     c1.metric("현재 심박수", "135 bpm")
                     c2.metric("경과 시간", "25:40")
                     c3.metric("소모 칼로리", "210 kcal")
                     if st.button("유산소 종료 및 저장", use_container_width=True): 
-                        st.session_state['today_records'].append({"기구": "트레드밀", "내용": "25분 40초 완료"})
+                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 40초 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
                     st.markdown("---")
                     st.markdown("#### 📝 운동 기록 입력")
                     last_w, last_r = 20, 10 
                     if '회원명' in history_df.columns and not history_df[history_df['회원명'] == current_user_name].empty:
-                        past = history_df[(history_df['회원명'] == current_user_name) & (history_df['주요 기구'].str.contains(machine_name, na=False))]
+                        past = history_df[(history_df['회원명'] == current_user_name) & (history_df['주요 기구'].str.contains(search_keyword, na=False))]
                         if not past.empty:
                             last_record = past.sort_values(by="날짜", ascending=False).iloc[0]
                             last_w, last_r = int(last_record.get('중량(kg)', 20)), int(last_record.get('횟수', 10))
@@ -428,16 +417,16 @@ def member_app():
                     
                     if st.button("💪 현재 세트 기록 완료 및 휴식", type="primary", use_container_width=True): 
                         for r in st.session_state['my_routine']:
-                            if machine_name in r.get('기구', ''):
+                            if search_keyword in r.get('기구', ''):
                                 r['완료'] = True
                         
-                        st.session_state['today_records'].append({"기구": machine_name, "중량": weight, "횟수": reps})
-                        st.toast(f"✅ {machine_name} 1세트 추가됨!")
+                        st.session_state['today_records'].append({"기구": search_keyword, "중량": weight, "횟수": reps})
+                        st.toast(f"✅ {search_keyword} 1세트 추가됨!")
                         
                         bar = st.progress(0, text="⏱️ 60초 휴식 타이머 진행 중...")
                         for p in range(100):
                             time.sleep(0.01) 
-                            bar.progress(p + 1, text="⏱️️ 60초 휴식 타이머 진행 중...")
+                            bar.progress(p + 1, text="⏱️ 60초 휴식 타이머 진행 중...")
                         st.info("🔔 휴식 종료! 다음 세트를 준비하세요.")
                         st.rerun()
 
