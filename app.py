@@ -27,7 +27,6 @@ def get_ai_greeting(user_name, routine_theme, api_key):
     except:
         return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
-# 🔥 [FRD M13 완벽 반영] AI 피드백 제약조건(관찰값 기반, 의학적 판단 배제) 강력 적용
 @st.cache_data(ttl=3600)
 def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
     if not api_key or len(api_key) < 10: 
@@ -277,6 +276,7 @@ def member_app():
 
     current_user_name = st.session_state['current_user']
     
+    # 사이드바 종료 버튼 유지
     if st.session_state['workout_state'] == "진행중":
         if st.sidebar.button("🏁 오늘 운동 마치기", type="primary"):
             st.session_state['workout_state'] = "완료"
@@ -429,8 +429,38 @@ def member_app():
                         st.info("🔔 휴식 종료! 다음 세트를 준비하세요.")
                         st.rerun()
 
+        # 🔥 [FRD M12 반영] 리포트 탭 진입 시 운동 상태에 따른 흐름 분기 추가
         elif menu == "📈 4. 리포트 및 오운완(종료)":
-            if st.session_state['workout_state'] == "완료":
+            if st.session_state['workout_state'] == "준비":
+                st.info("아직 운동을 시작하지 않았습니다. '2. 오늘의 처방' 탭에서 운동을 시작해주세요.")
+                st.markdown("---")
+            
+            elif st.session_state['workout_state'] == "진행중":
+                st.markdown("### 🏁 M12. 오늘 운동 종료하기")
+                st.warning("🏃 아직 운동 세션이 진행 중입니다. 종료 전 상태를 확인하세요.")
+                
+                planned_items = st.session_state['my_routine']
+                st.markdown("#### 📋 현재까지 수행 내역 요약")
+                for r in planned_items:
+                    if r.get('완료', False):
+                        st.write(f"✅ **{r.get('기구')}** - 완료")
+                    elif r.get('상태') == '건너뜀':
+                        st.write(f"⏭️ **{r.get('기구')}** - 건너뜀")
+                    else:
+                        st.write(f"⬜ **{r.get('기구')}** - 미완료")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("💪 계속 운동하기", use_container_width=True):
+                        st.toast("기구 스캔 탭으로 이동해주세요.")
+                with col2:
+                    if st.button("🚨 최종 종료하고 리포트 보기", type="primary", use_container_width=True):
+                        st.session_state['workout_state'] = "완료"
+                        st.rerun()
+                st.markdown("---")
+
+            elif st.session_state['workout_state'] == "완료":
                 st.markdown("### 📸 M13 & M18. 오늘 운동 결과 요약 및 오운완")
                 
                 planned_items = st.session_state['my_routine']
@@ -474,6 +504,7 @@ def member_app():
                     st.toast("✅ 이미지가 클립보드에 복사되었습니다!")
                 st.markdown("---")
 
+            # M14, M16은 상태와 무관하게 항상 표시
             st.markdown("### 🏆 M14. 주간 목표 진행률")
             st.progress(1.0, text="주간 방문 목표: 4회 중 4회 완료 (100%)")
             st.balloons()
