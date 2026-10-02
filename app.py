@@ -31,19 +31,19 @@ def get_ai_greeting(user_name, routine_theme, api_key):
         return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
 @st.cache_data(ttl=3600)
-def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
+def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, cardio_time, api_key):
     if not api_key or len(api_key) < 10: 
-        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 지난번 기록보다 잘 하셨네요. 다음엔 상체부터 시작해볼까요?'"
+        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 총 {total_vol}kg 볼륨을 달성하셨네요. 다음엔 상체부터 시작해볼까요?'"
     
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = (f"너는 철저하게 사실 기반으로만 말하는 AI 트레이너야. '{user_name}' 회원이 오늘 계획된 루틴 {planned_count}개 중 {completed_count}개를 완료했어. "
-                  f"(오늘 수행한 총 세트는 {total_sets}세트, 볼륨은 {total_vol}kg이야). "
+                  f"(오늘 달성 수치 -> 총 웨이트 세트: {total_sets}세트, 웨이트 볼륨: {total_vol}kg, 유산소: {cardio_time}). "
                   f"다음 4가지 규칙을 무조건 지켜서 3문장 이내로 작성해."
                   f"1. 시작은 반드시 '오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요'라는 문장으로 시작할 것."
-                  f"2. '지난번 기록보다 반복 횟수(또는 볼륨)가 늘었어요' 와 같이 철저하게 [관찰값] 기반의 칭찬만 할 것."
-                  f"3. 절대 칼로리 소모량, 근력 향상, 체형 변화 등 추측성이나 의학적인 멘트는 금지할 것."
+                  f"2. 위에서 주어진 '오늘 달성 수치'만을 인용하여 철저하게 [관찰값] 기반의 칭찬만 할 것. 거짓으로 과거와 비교하지 말 것."
+                  f"3. 절대 칼로리 소모량, 근력 향상, 체형 변화 등 측정되지 않은 값이나 의학적/추측성 멘트는 금지할 것."
                   f"4. 마지막 문장은 '다음에는 상체(또는 다른 부위) 운동부터 시작해 볼까요?' 처럼 다음 방문을 제안하며 끝낼 것.")
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
@@ -180,7 +180,7 @@ MACHINE_INSTRUCTIONS = {
     "파워 랙 (스쿼트)": {
         "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
         "target": "주요 부위: 대퇴사두근, 둔근 (하체 전체)",
-        "steps": ["1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.", "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.", "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.", "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨을 거치합니다."]
+        "steps": ["1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.", "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.", "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.", "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨 거치."]
     },
     "벤치프레스 머신": {
         "img": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
@@ -209,7 +209,7 @@ def reset_routine(user_name):
 if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
 
 # ==========================================
-# 3. 🎨 커스텀 CSS 
+# 3. 🎨 커스텀 CSS (UI 개선 완벽 적용)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -234,30 +234,36 @@ def inject_custom_css():
         .stApp { background-image: linear-gradient(rgba(10,10,12,0.6), rgba(10,10,12,0.8)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070'); background-size: cover; background-position: center; }
         .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(4rem, 10vw, 8rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
         .hero-subtitle { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
-        .stButton>button { border-radius: 20px !important; font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 900 !important; padding: 2rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(10px); height: auto !important; transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s !important; }
-        .stButton>button:hover { background-color: rgba(204, 255, 0, 0.15) !important; transform: translateY(-5px); color: #ccff00 !important; box-shadow: 0 10px 20px rgba(204,255,0,0.3) !important; }
+        .stButton>button { border-radius: 20px !important; font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 900 !important; padding: 2rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(10px); height: auto !important; transition: all 0.3s ease !important; }
+        .stButton>button:hover { transform: scale(1.03); box-shadow: 0 0 20px rgba(204,255,0,0.6) !important; color: #ccff00 !important; }
         </style>
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
-        # 🔥 [UI Fix] 다크 테마에서 파일 업로더 시인성 강제 보완
         st.markdown("""
         <style>
         .stApp { background-color: #0f172a !important; }
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #ffffff !important; }
         
-        /* 파일 업로더 패치 */
-        [data-testid="stFileUploadDropzone"] { background-color: rgba(255, 255, 255, 0.05) !important; border: 2px dashed #4facfe !important; border-radius: 12px !important; }
-        [data-testid="stFileUploadDropzone"] * { color: #ffffff !important; }
-        [data-testid="stFileUploadDropzone"] button { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; font-weight: 800 !important; border-radius: 8px !important; }
+        /* 🔥 [UI 개선 1] 하얀색 입력 박스(파일업로드, 셀렉트박스 등) 내부 글자를 어두운 네이비색으로 고정하여 시인성 100% 확보 */
+        [data-baseweb="select"] span, 
+        [data-baseweb="select"] div,
+        [data-baseweb="input"] input, 
+        [data-testid="stFileUploadDropzone"] p,
+        [data-testid="stFileUploadDropzone"] span,
+        [data-testid="stFileUploadDropzone"] small,
+        [data-testid="stFileUploadDropzone"] svg { color: #0f172a !important; fill: #0f172a !important; font-weight: 600 !important; }
 
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
         .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: #ffffff !important;}
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        button[kind="primary"]:not([data-testid="stFileUploadDropzone"] button) { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
-        button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4) !important; color: #111111 !important; }
-        button[kind="secondary"]:not([data-testid="stFileUploadDropzone"] button) { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
-        button[kind="secondary"]:hover { transform: translateY(-2px); background-color: rgba(0, 242, 254, 0.2) !important; border-color: #00f2fe !important; color: #ffffff !important; }
+        
+        /* 🔥 [UI 개선 2] 버튼 Hover 시 색상 변경 대신, 크기 확대(Scale) 및 파란 네온 글로우 효과 적용 */
+        button[kind="primary"] { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: all 0.3s ease !important; }
+        button[kind="primary"]:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 242, 254, 0.6) !important; color: #111111 !important; }
+        
+        button[kind="secondary"] { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: all 0.3s ease !important; }
+        button[kind="secondary"]:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(255, 255, 255, 0.3) !important; background-color: rgba(255, 255, 255, 0.1) !important; border-color: #00f2fe !important; color: #ffffff !important; }
         </style>
         """, unsafe_allow_html=True)
         
@@ -267,10 +273,13 @@ def inject_custom_css():
         .stApp { background-color: #F4F7F9 !important; }
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] span, [data-testid="stMain"] label { color: #1e293b !important; }
         .corp-card { background-color: #ffffff !important; border-radius: 12px; padding: 20px; border-left: 5px solid #2563EB; margin-bottom: 20px; color: #1e293b !important;}
-        button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
-        button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3) !important; color: #ffffff !important; }
-        button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
-        button[kind="secondary"]:hover { transform: translateY(-2px); background-color: #eff6ff !important; border-color: #2563EB !important; color: #1e293b !important; }
+        
+        /* 점주 화면 버튼 Hover 애니메이션 통일 */
+        button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: all 0.3s ease !important; }
+        button[kind="primary"]:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important; color: #ffffff !important; }
+        
+        button[kind="secondary"] { background-color: #ffffff !important; color: #1e293b !important; border-radius: 8px !important; border: 1px solid #cbd5e1 !important; font-weight: 600 !important; transition: all 0.3s ease !important; }
+        button[kind="secondary"]:hover { transform: scale(1.02); box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important; background-color: #eff6ff !important; border-color: #2563EB !important; color: #1e293b !important; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -513,7 +522,7 @@ def member_app():
                 cardio_records = [r['내용'] for r in st.session_state['today_records'] if '내용' in r]
                 cardio_str = ", ".join(cardio_records) if cardio_records else "없음"
 
-                ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, st.session_state['gemini_api_key'])
+                ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, cardio_str, st.session_state['gemini_api_key'])
                 st.success(ai_fb)
                 
                 st.markdown("### 📅 M27. 다음 운동 약속하기")
@@ -547,7 +556,7 @@ def member_app():
                     <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0;">
                     <p style="font-size: 1.1rem;">📅 {datetime.now().strftime('%Y.%m.%d')}</p>
                     <p style="font-size: 1.1rem;">🏃 유산소: {cardio_str}</p>
-                    <p style="font-size: 1.1rem;">🏋️ 총 볼륨: {total_vol} kg</p>
+                    <p style="font-size: 1.1rem;">🏋️ 총 웨이트 볼륨: {total_vol} kg</p>
                     <p style="font-size: 1.1rem;">🔥 달성률: {planned_count}개 중 {completed_count}개 완료</p>
                     <p style="font-size: 1.2rem; color: #ccff00; margin-top: 10px;">🎁 +100 코인 획득!</p>
                 </div><br>
