@@ -8,14 +8,13 @@ from datetime import datetime
 import google.generativeai as genai
 
 # ==========================================
-# 0. 🤖 Gemini AI 설정 (검증 로직 수정)
+# 0. 🤖 Gemini AI 설정 및 프롬프트 고도화
 # ==========================================
 if 'gemini_api_key' not in st.session_state:
     st.session_state['gemini_api_key'] = ""
 
 @st.cache_data(ttl=3600) 
 def get_ai_greeting(user_name, routine_theme, api_key):
-    # 키가 없거나 비어있을 때만 기본 모드 작동 (시작 문자열 검증 로직 제거)
     if not api_key or len(api_key) < 10: 
         return f"🗣 (기본 모드) '{user_name}님, 오늘의 테마는 [{routine_theme}]입니다! 부상 없이 파이팅해봐요!'"
     
@@ -26,22 +25,26 @@ def get_ai_greeting(user_name, routine_theme, api_key):
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
     except Exception as e:
-        # 에러 발생 시 로그를 남기지 않고 조용히 Fallback
         return f"🗣 (AI 연결 중...) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
+# 🔥 [FRD M13 반영] 프롬프트 제약조건 및 수치 기반 피드백 강화
 @st.cache_data(ttl=3600)
-def get_ai_workout_feedback(user_name, total_sets, total_vol, api_key):
+def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
     if not api_key or len(api_key) < 10: 
-        return f"🗣 (기본 모드) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
+        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 수고하셨습니다.'"
     
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = f"너는 AI 트레이너야. '{user_name}' 회원이 방금 운동을 마쳤어. 오늘 총 {total_sets}세트를 수행했고, 총 볼륨은 {total_vol}kg이야. 수고했다는 칭찬과 함께 다음 운동을 기대하게 만드는 짧은 피드백 2문장을 써줘."
+        prompt = (f"너는 AI 트레이너야. '{user_name}' 회원이 오늘 계획된 루틴 {planned_count}개 중 {completed_count}개를 완료했어. "
+                  f"(오늘 수행한 총 세트는 {total_sets}세트, 볼륨은 {total_vol}kg이야). "
+                  f"1. 반드시 '오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요'라는 사실 기반 관찰값을 포함해서 칭찬해줘. "
+                  f"2. 절대 칼로리, 근력 향상, 건강 개선, 체형 변화 같은 의학적/추측성 멘트를 생성하지 마. "
+                  f"3. 다음 방문에 할 운동 부위(예: 상체, 하체, 코어 등)를 하나 제안하는 내용을 포함해서 총 3문장 이내로 써줘.")
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
     except Exception as e:
-        return f"🗣 (AI 연결 중...) '{user_name}님, 수고하셨습니다! 오늘 총 {total_sets}세트를 훌륭히 소화하셨네요!'"
+        return f"🗣 (AI 연결 중...) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 수고하셨습니다.'"
 
 # ==========================================
 # 1. 🌐 구글 스프레드시트 (CSV) 연동 설정
@@ -119,7 +122,6 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-# 🔥 실시간 DB 연동을 위한 전역 변수
 ROUTINE_DB = {
     "박수민": {
         "theme": "🔥 하체 볼륨업 (근력 증가)",
@@ -153,6 +155,8 @@ ROUTINE_DB = {
 def reset_routine(user_name):
     import copy
     db_entry = ROUTINE_DB.get(user_name, ROUTINE_DB["default"])
+    st.session_state['routine_theme'] = db_entry["theme"]
+    st.session_state['routine_reason'] = db_entry["reason"]
     st.session_state['my_routine'] = copy.deepcopy(db_entry["routines"])
 
 if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
@@ -218,7 +222,7 @@ def inject_custom_css():
 def member_app():
     st.sidebar.markdown("**👟 회원 (B2C) 제어판**")
     
-    with st.sidebar.expander("⚙️️ AI 설정 (관리자용)"):
+    with st.sidebar.expander("⚙️ AI 설정 (관리자용)"):
         input_key = st.text_input("Gemini API Key 입력", value=st.session_state['gemini_api_key'], type="password")
         st.caption("※ 정상적인 키는 'AQ...' 등으로 시작할 수 있습니다.")
         if st.button("API 연동 확인"):
@@ -272,7 +276,7 @@ def member_app():
             st.selectbox("🎯 최우선 운동 목표", ["근력 증가 (벌크업)", "체중 관리 (다이어트)", "운동 습관 만들기"])
             st.number_input("주당 희망 방문 횟수", min_value=1, max_value=7, value=4)
             avoid = st.multiselect("피하고 싶은 부위 (부상 등)", ["어깨", "허리", "무릎", "손목"])
-            if avoid: st.warning(f"⚠️ '{', '.join(avoid)}' 부위에 무리가 가는 기구는 추천에서 제외하고 대체 운동을 제안합니다.")
+            if avoid: st.warning(f"⚠️️ '{', '.join(avoid)}' 부위에 무리가 가는 기구는 추천에서 제외하고 대체 운동을 제안합니다.")
             
             if st.button("목표 저장", use_container_width=True): st.toast("목표 저장 완료!")
 
@@ -280,11 +284,10 @@ def member_app():
             st.markdown("### 🤖 M03. AI 트레이너 추천 루틴")
             
             if not st.session_state.get('ai_mode', True):
-                st.warning("⚠️️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
+                st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
-                db_entry = ROUTINE_DB.get(current_user_name, ROUTINE_DB["default"])
-                theme = db_entry["theme"]
-                reason = db_entry["reason"]
+                theme = st.session_state.get('routine_theme', '')
+                reason = st.session_state.get('routine_reason', '')
                 
                 ai_msg = get_ai_greeting(current_user_name, theme, st.session_state['gemini_api_key'])
                 st.success(ai_msg)
@@ -371,6 +374,11 @@ def member_app():
                         st.caption("아직 기록된 세트가 없습니다.")
                     
                     if st.button("💪 현재 세트 기록 완료 및 휴식", type="primary", use_container_width=True): 
+                        # 세트 저장 시 루틴 체크리스트 자동 갱신 (간이 로직)
+                        for r in st.session_state['my_routine']:
+                            if machine_name in r.get('기구', ''):
+                                r['완료'] = True
+                        
                         st.session_state['today_records'].append({"기구": machine_name, "중량": weight, "횟수": reps})
                         st.toast(f"✅ {machine_name} 1세트 추가됨!")
                         
@@ -383,12 +391,34 @@ def member_app():
 
         elif menu == "📈 4. 리포트 및 오운완(종료)":
             if st.session_state['workout_state'] == "완료":
-                st.markdown("### 📸 M18. 오운완 (오늘 운동 완료)")
+                st.markdown("### 📸 M13 & M18. 오늘 운동 결과 요약 및 오운완")
+                
+                # 🔥 [FRD M13 반영] 계획, 완료, 건너뜀 항목 명시적 계산
+                planned_items = st.session_state['my_routine']
+                planned_count = len(planned_items)
+                completed_items = [r for r in planned_items if r.get('완료', False)]
+                completed_count = len(completed_items)
+                
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
-                ai_fb = get_ai_workout_feedback(current_user_name, total_sets, total_vol, st.session_state['gemini_api_key'])
-                st.info(ai_fb)
+                # 고도화된 AI 멘트 호출 (수치 및 제약조건 포함)
+                ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, st.session_state['gemini_api_key'])
+                st.success(ai_fb)
+                
+                # 🔥 [FRD M13 반영] 처음에 제안한 루틴 중 무엇을 완료/건너뛰었는지 노출
+                st.markdown("#### 📋 오늘의 루틴 수행 결과")
+                for r in planned_items:
+                    if r.get('완료', False):
+                        st.write(f"✅ **{r.get('기구')}** - 완료")
+                    elif r.get('상태') == '건너뜀':
+                        st.write(f"⏭️ **{r.get('기구')}** - 건너뜀 (사유: 사용자 선택)")
+                    else:
+                        st.write(f"⬜ **{r.get('기구')}** - 미완료")
+                
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.button("📊 지난 기록 상세 보기 (운동 이력 확인)", use_container_width=True):
+                    st.toast("현재 화면 아래의 '나의 누적 볼륨 추이'에서 확인 가능합니다.")
                 
                 card_html = f"""
                 <div class='owoonwan-card'>
@@ -398,7 +428,7 @@ def member_app():
                     <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0;">
                     <p style="font-size: 1.1rem;">📅 {datetime.now().strftime('%Y.%m.%d')}</p>
                     <p style="font-size: 1.1rem;">🏋️ 총 볼륨: {total_vol} kg</p>
-                    <p style="font-size: 1.1rem;">🔥 완료 세트: {total_sets} Sets</p>
+                    <p style="font-size: 1.1rem;">🔥 달성률: {planned_count}개 중 {completed_count}개 완료</p>
                 </div>
                 <br>
                 """
@@ -452,7 +482,7 @@ def member_app():
                     st.toast("신고 접수 완료!")
                     st.rerun()
             with tab3:
-                st.markdown("#### ⚙️️ 알림 및 개인화 설정")
+                st.markdown("#### ⚙️ 알림 및 개인화 설정")
                 st.toggle("🔔 필수 서비스 알림 (운동 리마인드 등)", value=True)
                 st.toggle("💌 선택 마케팅 알림 (이벤트, 혜택 등)", value=True)
                 ai_mode = st.toggle("🤖 AI 개인화 추천 모드 사용", value=st.session_state.get('ai_mode', True), help="끄시면 기본 모드로 전환됩니다.")
