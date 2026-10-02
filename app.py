@@ -30,21 +30,20 @@ def get_ai_greeting(user_name, routine_theme, api_key):
     except:
         return f"🗣 (시스템) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
-# 🔥 [FRD M13 보완] 유산소 시간 추가 및 철저한 객관적 관찰값(Fact) 기반 프롬프팅
 @st.cache_data(ttl=3600)
-def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, cardio_time, api_key):
+def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
     if not api_key or len(api_key) < 10: 
-        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 총 {total_vol}kg 볼륨을 달성하셨네요. 다음엔 상체부터 시작해볼까요?'"
+        return f"🗣 (기본 모드) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요! 지난번 기록보다 잘 하셨네요. 다음엔 상체부터 시작해볼까요?'"
     
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = (f"너는 철저하게 사실 기반으로만 말하는 AI 트레이너야. '{user_name}' 회원이 오늘 계획된 루틴 {planned_count}개 중 {completed_count}개를 완료했어. "
-                  f"(오늘 달성 수치 -> 총 웨이트 세트: {total_sets}세트, 웨이트 볼륨: {total_vol}kg, 유산소: {cardio_time}). "
+                  f"(오늘 수행한 총 세트는 {total_sets}세트, 볼륨은 {total_vol}kg이야). "
                   f"다음 4가지 규칙을 무조건 지켜서 3문장 이내로 작성해."
                   f"1. 시작은 반드시 '오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요'라는 문장으로 시작할 것."
-                  f"2. 위에서 주어진 '오늘 달성 수치'만을 인용하여 철저하게 [관찰값] 기반의 칭찬만 할 것. 거짓으로 과거와 비교하지 말 것."
-                  f"3. 절대 칼로리 소모량, 근력 향상, 체형 변화 등 측정되지 않은 값이나 의학적/추측성 멘트는 금지할 것."
+                  f"2. '지난번 기록보다 반복 횟수(또는 볼륨)가 늘었어요' 와 같이 철저하게 [관찰값] 기반의 칭찬만 할 것."
+                  f"3. 절대 칼로리 소모량, 근력 향상, 체형 변화 등 추측성이나 의학적인 멘트는 금지할 것."
                   f"4. 마지막 문장은 '다음에는 상체(또는 다른 부위) 운동부터 시작해 볼까요?' 처럼 다음 방문을 제안하며 끝낼 것.")
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
@@ -81,7 +80,10 @@ SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
-    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600"
+    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
+    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
+    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
+    "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
 }
 
 @st.cache_data(ttl=600)  
@@ -238,16 +240,23 @@ def inject_custom_css():
         """, unsafe_allow_html=True)
 
     elif st.session_state['role'] == 'MEMBER':
+        # 🔥 [UI Fix] 다크 테마에서 파일 업로더 시인성 강제 보완
         st.markdown("""
         <style>
         .stApp { background-color: #0f172a !important; }
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #ffffff !important; }
+        
+        /* 파일 업로더 패치 */
+        [data-testid="stFileUploadDropzone"] { background-color: rgba(255, 255, 255, 0.05) !important; border: 2px dashed #4facfe !important; border-radius: 12px !important; }
+        [data-testid="stFileUploadDropzone"] * { color: #ffffff !important; }
+        [data-testid="stFileUploadDropzone"] button { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; font-weight: 800 !important; border-radius: 8px !important; }
+
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
         .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: #ffffff !important;}
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        button[kind="primary"] { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
+        button[kind="primary"]:not([data-testid="stFileUploadDropzone"] button) { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: transform 0.2s, box-shadow 0.2s !important; }
         button[kind="primary"]:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4) !important; color: #111111 !important; }
-        button[kind="secondary"] { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
+        button[kind="secondary"]:not([data-testid="stFileUploadDropzone"] button) { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: transform 0.2s, background-color 0.2s !important; }
         button[kind="secondary"]:hover { transform: translateY(-2px); background-color: rgba(0, 242, 254, 0.2) !important; border-color: #00f2fe !important; color: #ffffff !important; }
         </style>
         """, unsafe_allow_html=True)
@@ -271,16 +280,6 @@ def inject_custom_css():
 def member_app():
     st.sidebar.markdown("**👟 회원 (B2C) 제어판**")
     
-    with st.sidebar.expander("⚙️ AI 설정 (관리자용)"):
-        input_key = st.text_input("Gemini API Key 입력", value=st.session_state['gemini_api_key'], type="password")
-        st.caption("※ 정상적인 키는 'AQ...' 등으로 시작할 수 있습니다.")
-        if st.button("API 연동 확인"):
-            if input_key:
-                st.session_state['gemini_api_key'] = input_key
-                st.success("✅ 키가 세션에 임시 저장되었습니다.")
-            else:
-                st.warning("키를 입력해주세요.")
-
     all_members = df_members['회원명'].tolist() if not df_members.empty else ["박수민", "최운식"]
     if "박수민" not in all_members: all_members.insert(0, "박수민")
     
@@ -315,7 +314,6 @@ def member_app():
         st.markdown("<div class='insta-gradient-text'>FITPASS PRO</div>", unsafe_allow_html=True)
         st.markdown(f"<div class='profile-card'><b style='color:#ffffff;'>@{current_user_name}_workout</b>님, 환영합니다!<br><span style='color:#00f2fe !important;'>운동 상태: {st.session_state['workout_state']}</span></div>", unsafe_allow_html=True)
         
-        # 🔥 [FRD M27] 리마인드 배너 노출 (M22 알림 설정과 연계)
         if st.session_state.get('next_workout_promise') and st.session_state.get('reminders_on', True):
             c_banner1, c_banner2 = st.columns([4, 1])
             with c_banner1:
@@ -367,7 +365,7 @@ def member_app():
                     with col1:
                         status_mark = "✅" if r.get('완료', False) else ("⏭️" if r.get('상태', '대기') == "건너뜀" else "⬜")
                         st.markdown(f"**{status_mark} [{r.get('부위', '')}] {r.get('기구', '')}**")
-                        st.caption(f"🔹 목표: {r.get('목표', '')} | ⏱️️ 예상 소요: {r.get('시간', '10분')}")
+                        st.caption(f"🔹 목표: {r.get('목표', '')} | ⏱️ 예상 소요: {r.get('시간', '10분')}")
                     with col2:
                         if not r.get('완료', False) and r.get('상태', '대기') != "건너뜀":
                             if st.button("건너뛰기/변경", key=f"rep_{idx}"):
@@ -395,7 +393,6 @@ def member_app():
         elif menu == "📡 3. 기구 스캔 (기록/타이머)":
             st.markdown("### 📡 M06 & M25. 기구 스캔 및 즐겨찾기")
             
-            # 🔥 [FRD M25 반영] 즐겨찾기 빠른 접근 메뉴
             selected_machine = None
             if st.session_state['fav_machines']:
                 fav_sel = st.radio("⭐ 즐겨찾기 기구 빠른 선택 (M25):", ["선택 안 함"] + st.session_state['fav_machines'], horizontal=True)
@@ -409,7 +406,6 @@ def member_app():
                     selected_machine = machine_sel
 
             if selected_machine:
-                # 기구 상세화면에 즐겨찾기 설정 제공
                 is_fav = selected_machine in st.session_state['fav_machines']
                 if st.toggle(f"⭐ '{selected_machine}' 즐겨찾기 설정", value=is_fav):
                     if selected_machine not in st.session_state['fav_machines']:
@@ -438,7 +434,7 @@ def member_app():
                     c2.metric("경과 시간", "25:40")
                     c3.metric("소모 칼로리", "210 kcal")
                     if st.button("유산소 종료 및 저장", use_container_width=True): 
-                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 완료"})
+                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 40초 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
                     st.markdown("---")
@@ -514,14 +510,12 @@ def member_app():
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
-                # 🔥 M13 유산소 시간 집계 로직 적용
                 cardio_records = [r['내용'] for r in st.session_state['today_records'] if '내용' in r]
                 cardio_str = ", ".join(cardio_records) if cardio_records else "없음"
 
-                ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, cardio_str, st.session_state['gemini_api_key'])
+                ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, st.session_state['gemini_api_key'])
                 st.success(ai_fb)
                 
-                # 🔥 [FRD M27 반영] 다음 운동 약속 및 반복 설정
                 st.markdown("### 📅 M27. 다음 운동 약속하기")
                 with st.expander("AI 트레이너와 다음 방문일을 약속하고 리마인드를 받아보세요!", expanded=True):
                     c1, c2 = st.columns(2)
@@ -553,14 +547,13 @@ def member_app():
                     <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0;">
                     <p style="font-size: 1.1rem;">📅 {datetime.now().strftime('%Y.%m.%d')}</p>
                     <p style="font-size: 1.1rem;">🏃 유산소: {cardio_str}</p>
-                    <p style="font-size: 1.1rem;">🏋️ 총 웨이트 볼륨: {total_vol} kg</p>
+                    <p style="font-size: 1.1rem;">🏋️ 총 볼륨: {total_vol} kg</p>
                     <p style="font-size: 1.1rem;">🔥 달성률: {planned_count}개 중 {completed_count}개 완료</p>
                     <p style="font-size: 1.2rem; color: #ccff00; margin-top: 10px;">🎁 +100 코인 획득!</p>
                 </div><br>
                 """
                 st.markdown(card_html, unsafe_allow_html=True)
 
-            # 🔥 [FRD M24 반영] 월간 리포트 (자주 이용한 기구 등 세부 항목 추가)
             tab1, tab2 = st.tabs(["📊 주간 및 월간 리포트 (M24)", "📈 누적 추이"])
             with tab1:
                 st.markdown("#### 🎯 주간 목표 진행률")
@@ -593,7 +586,6 @@ def member_app():
                         st.altair_chart(chart_history, use_container_width=True, theme=None)
                     else: st.info("기록이 없습니다.")
 
-        # 🔥 [FRD M26 반영] 명확한 배지 이름 설정
         elif menu == "🏆 5. 랭킹 및 리워드":
             tab_rank, tab_reward, tab_badge = st.tabs(["🏆 지점 랭킹", "🎁 코인 샵", "🏅 내 배지(M26)"])
             
@@ -609,9 +601,7 @@ def member_app():
                 })
                 st.dataframe(rank_data, hide_index=True, use_container_width=True)
                 
-                st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 2위(송지효)까지 방문 1회 남았습니다! 조금만 더 힘내세요!")
-                if st.button("🔥 1위에게 자극받기 (응원 보내기)"):
-                    st.toast("이광수님에게 응원의 메시지를 보냈습니다!")
+                st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 조금만 더 힘내세요!")
 
             with tab_reward:
                 st.markdown("### 🎁 포인트 교환소")
@@ -681,7 +671,6 @@ def member_app():
                     st.rerun()
             with tab3:
                 st.markdown("#### ⚙️ 알림 및 개인화 설정")
-                # 🔥 [FRD M22 연동] 리마인드 알림 토글을 세션과 연동
                 reminders = st.toggle("🔔 필수 서비스 알림 (운동 리마인드 등)", value=st.session_state.get('reminders_on', True))
                 if reminders != st.session_state.get('reminders_on', True):
                     st.session_state['reminders_on'] = reminders
