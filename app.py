@@ -80,7 +80,10 @@ SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
-    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600"
+    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
+    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
+    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
+    "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
 }
 
 @st.cache_data(ttl=600)  
@@ -206,7 +209,7 @@ def reset_routine(user_name):
 if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
 
 # ==========================================
-# 3. 🎨 커스텀 CSS (파일 업로더 다크 모드 완벽 패치)
+# 3. 🎨 커스텀 CSS (UI 개선 완벽 적용)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -242,25 +245,21 @@ def inject_custom_css():
         .stApp { background-color: #0f172a !important; }
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #ffffff !important; }
         
-        /* 🔥 [UI 보완] 셀렉트박스/인풋창 내부 글자는 어둡게 고정 */
         [data-baseweb="select"] *, 
         [data-baseweb="input"] input { color: #1e293b !important; font-weight: 600 !important; }
 
-        /* 🔥 [UI 보완] 파일 업로더 박스를 다크 테마 배경에 맞추고 내부 텍스트를 선명하게 수정 */
         [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; border: 2px dashed #4facfe !important; border-radius: 12px !important; }
         [data-testid="stFileUploadDropzone"] div,
         [data-testid="stFileUploadDropzone"] span,
         [data-testid="stFileUploadDropzone"] small,
         [data-testid="stFileUploadDropzone"] p { color: #ffffff !important; font-weight: 500 !important; }
         
-        /* 파일 업로더 내 'Upload' 버튼 파란색 그라데이션 적용 */
         [data-testid="stFileUploadDropzone"] button { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; font-weight: 800 !important; border-radius: 8px !important; }
 
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
         .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: #ffffff !important;}
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         
-        /* 일반 버튼 효과 (스케일업 + 글로우) */
         button[kind="primary"]:not([data-testid="stFileUploadDropzone"] button) { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: all 0.3s ease !important; }
         button[kind="primary"]:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 242, 254, 0.6) !important; color: #111111 !important; }
         
@@ -444,7 +443,7 @@ def member_app():
                     c2.metric("경과 시간", "25:40")
                     c3.metric("소모 칼로리", "210 kcal")
                     if st.button("유산소 종료 및 저장", use_container_width=True): 
-                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 40초 완료"})
+                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
                     st.markdown("---")
@@ -603,14 +602,21 @@ def member_app():
                 st.markdown("### 👑 이번 주 명예의 전당")
                 st.caption("※ 주간 방문 횟수 및 총 볼륨을 기준으로 산정됩니다.")
                 
-                rank_data = pd.DataFrame({
-                    "순위": ["1위 🥇", "2위 🥈", "3위 🥉", "4위", "5위"],
+                # 점주 차트와 통일성을 위해 이탈확률 대신 랭킹 막대그래프 활용
+                rank_df = pd.DataFrame({
                     "회원": ["이광수", "송지효", f"{current_user_name}(나)", "최운식", "김철수"],
-                    "주간 방문(일)": [5, 4, 3, 2, 1],
                     "주간 누적 볼륨(kg)": [12500, 9800, 8500, 5400, 3200]
                 })
-                st.dataframe(rank_data, hide_index=True, use_container_width=True)
-                
+                bars = alt.Chart(rank_df).mark_bar(cornerRadiusEnd=4).encode(
+                    x=alt.X('주간 누적 볼륨(kg):Q', title='주간 누적 볼륨 (kg)'),
+                    y=alt.Y('회원:N', sort='-x', title=''),
+                    color=alt.condition(alt.datum.회원 == f"{current_user_name}(나)", alt.value('#ccff00'), alt.value('#4facfe')),
+                    tooltip=['회원', '주간 누적 볼륨(kg)']
+                )
+                text = bars.mark_text(align='left', baseline='middle', dx=5, fontSize=12, fontWeight='bold', color='white').encode(
+                    text=alt.Text('주간 누적 볼륨(kg):Q', format=',')
+                )
+                st.altair_chart((bars + text).properties(height=250), use_container_width=True)
                 st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 조금만 더 힘내세요!")
 
             with tab_reward:
@@ -730,11 +736,29 @@ def owner_app():
     elif menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
         if not churn_df.empty:
-            st.markdown("#### 🔍 이탈 위험 요인 상세 분석")
-            factor_data = []
-            for member in churn_df['회원명']: factor_data.extend([{"회원명": member, "요인": "방문 빈도 하락", "비중(%)": np.random.randint(40, 70)}, {"회원명": member, "요인": "총 볼륨 감소", "비중(%)": np.random.randint(10, 30)}])
-            factor_chart = alt.Chart(pd.DataFrame(factor_data)).mark_bar().encode(x=alt.X('sum(비중(%)):Q', stack='normalize', axis=alt.Axis(format='%')), y='회원명:N', color='요인:N').properties(height=200)
-            st.altair_chart(factor_chart, use_container_width=True)
+            st.markdown("#### 🔍 AI 예측 이탈 확률 랭킹 (80% 이상 집중 케어)")
+            plot_df = churn_df.copy()
+            if '이탈확률(%)' in plot_df.columns:
+                plot_df['이탈확률(%)'] = pd.to_numeric(plot_df['이탈확률(%)'], errors='coerce').fillna(0)
+                
+                bars = alt.Chart(plot_df).mark_bar(size=25, cornerRadiusEnd=4).encode(
+                    x=alt.X('이탈확률(%):Q', title='이탈 확률 (%)', scale=alt.Scale(domain=[0, 100])),
+                    y=alt.Y('회원명:N', sort='-x', title='위험 회원명', axis=alt.Axis(labelFontSize=13)),
+                    color=alt.condition(
+                        alt.datum['이탈확률(%)'] >= 80,
+                        alt.value('#EF4444'),  # 80% 이상 빨간색
+                        alt.value('#F59E0B')   # 그 외 주황색
+                    ),
+                    tooltip=['회원명', '이탈확률(%)', '잔여일', '볼륨증감률(%)']
+                )
+                text = bars.mark_text(align='left', baseline='middle', dx=5, fontSize=13, fontWeight='bold', color='#1e293b').encode(
+                    text=alt.Text('이탈확률(%):Q', format='.0f')
+                )
+                factor_chart = (bars + text).properties(height=400)
+                st.altair_chart(factor_chart, use_container_width=True)
+            else:
+                st.info("이탈확률 데이터가 없습니다.")
+                
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
         default_churn = [m for m in churn_df['회원명'].tolist() if m in all_members] if not churn_df.empty else []
         selected_churn = st.multiselect("발송 대상 선택", options=all_members, default=default_churn)
