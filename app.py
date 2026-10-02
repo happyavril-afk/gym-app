@@ -80,10 +80,7 @@ SHEET_URL_FACILITY         = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}
 
 FALLBACK_DATA = {
     "member": "회원명,가입일,잔여일,주평균방문,방문추세,볼륨증감률(%),정체종목,정체기간(주),이탈확률(%),타겟분류\n김철수,2025.11.15,45,1.2,감소 📉,-15,없음,0,88,이탈위험\n박지민,2026.01.10,120,1.5,감소 📉,-10,없음,0,75,이탈위험\n이광수,2024.05.10,150,4.5,증가 📈,12,없음,0,5,VIP\n송지효,2023.11.22,210,5.1,증가 📈,22,없음,0,2,VIP\n최운식,2025.05.15,180,3.0,유지 ➖,2,스쿼트,4,25,정체기\n전소민,2026.02.28,60,2.5,유지 ➖,0,숄더 프레스,3,40,정체기",
-    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600",
-    "heatmap": "시간,파워 랙 (웨이트),트레드밀 (유산소),스미스 머신,스트레칭존,케이블 머신\n06:00,10,25,5,15,10\n09:00,25,45,15,20,25\n12:00,30,35,25,25,40\n15:00,50,60,40,30,55\n18:00,95,100,85,60,90",
-    "qna": "id,시간,회원명,유형,내용,상태,답변\n1,오늘 14:20,박수민,🏋 운동/자세 피드백,어깨가 결려요.,대기중,\n2,오늘 13:05,김민지,💳 회원권/PT 문의,할인 문의,답변완료,적용됩니다!",
-    "facility": "id,시간,신고자,위치,내용,상태,답변\n1,오늘 09:15,이동국,프리웨이트존,조절 핀 불량,접수됨,\n2,어제 21:00,유재석,남자 탈의실,수압이 약해요,조치중,수리 요청함"
+    "workout": "날짜,회원명,운동 부위,주요 기구,중량(kg),횟수,세트,총 볼륨(kg)\n07.01,박수민,등,랫풀다운,15,12,5,900\n07.02,이광수,등,케이블 로우,45,15,3,2025\n07.03,마동석,하체,레그 익스텐션,140,12,3,5040\n07.03,박수민,가슴,체스트 프레스,40,15,3,1800\n07.04,박수민,가슴,벤치프레스,40,10,4,1600"
 }
 
 @st.cache_data(ttl=600)  
@@ -180,7 +177,7 @@ MACHINE_INSTRUCTIONS = {
     "파워 랙 (스쿼트)": {
         "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
         "target": "주요 부위: 대퇴사두근, 둔근 (하체 전체)",
-        "steps": ["1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.", "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.", "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.", "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨 거치."]
+        "steps": ["1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.", "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.", "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.", "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨을 거치합니다."]
     },
     "벤치프레스 머신": {
         "img": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
@@ -209,7 +206,7 @@ def reset_routine(user_name):
 if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
 
 # ==========================================
-# 3. 🎨 커스텀 CSS (UI 개선 완벽 적용)
+# 3. 🎨 커스텀 CSS (파일 업로더 다크 모드 완벽 패치)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -234,8 +231,8 @@ def inject_custom_css():
         .stApp { background-image: linear-gradient(rgba(10,10,12,0.6), rgba(10,10,12,0.8)), url('https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=2070'); background-size: cover; background-position: center; }
         .hero-title { font-family: 'Montserrat', sans-serif !important; font-size: clamp(4rem, 10vw, 8rem) !important; font-weight: 900; color: #ffffff; text-align: center; margin-top: 15vh; text-shadow: 0 4px 20px rgba(0,0,0,0.8); }
         .hero-subtitle { font-size: clamp(1.5rem, 4vw, 2.5rem) !important; color: #ccff00; text-align: center; font-weight: 700; margin-bottom: 80px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
-        .stButton>button { border-radius: 20px !important; font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 900 !important; padding: 2rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(10px); height: auto !important; transition: all 0.3s ease !important; }
-        .stButton>button:hover { transform: scale(1.03); box-shadow: 0 0 20px rgba(204,255,0,0.6) !important; color: #ccff00 !important; }
+        .stButton>button { border-radius: 20px !important; font-size: clamp(1.5rem, 3vw, 2.5rem) !important; font-weight: 900 !important; padding: 2rem 1rem !important; border: 3px solid #ccff00 !important; color: #ccff00 !important; background: rgba(0, 0, 0, 0.7) !important; backdrop-filter: blur(10px); height: auto !important; transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s !important; }
+        .stButton>button:hover { background-color: rgba(204, 255, 0, 0.15) !important; transform: translateY(-5px); color: #ccff00 !important; box-shadow: 0 10px 20px rgba(204,255,0,0.3) !important; }
         </style>
         """, unsafe_allow_html=True)
 
@@ -245,24 +242,29 @@ def inject_custom_css():
         .stApp { background-color: #0f172a !important; }
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] label, [data-testid="stMain"] li, [data-testid="stMain"] b, [data-testid="stMain"] strong, [data-testid="stMain"] span:not([class*="stIcon"]):not(.material-icons) { color: #ffffff !important; }
         
-        /* 🔥 [UI 개선 1] 하얀색 입력 박스(파일업로드, 셀렉트박스 등) 내부 글자를 어두운 네이비색으로 고정하여 시인성 100% 확보 */
-        [data-baseweb="select"] span, 
-        [data-baseweb="select"] div,
-        [data-baseweb="input"] input, 
-        [data-testid="stFileUploadDropzone"] p,
+        /* 🔥 [UI 보완] 셀렉트박스/인풋창 내부 글자는 어둡게 고정 */
+        [data-baseweb="select"] *, 
+        [data-baseweb="input"] input { color: #1e293b !important; font-weight: 600 !important; }
+
+        /* 🔥 [UI 보완] 파일 업로더 박스를 다크 테마 배경에 맞추고 내부 텍스트를 선명하게 수정 */
+        [data-testid="stFileUploadDropzone"] { background-color: #1e293b !important; border: 2px dashed #4facfe !important; border-radius: 12px !important; }
+        [data-testid="stFileUploadDropzone"] div,
         [data-testid="stFileUploadDropzone"] span,
         [data-testid="stFileUploadDropzone"] small,
-        [data-testid="stFileUploadDropzone"] svg { color: #0f172a !important; fill: #0f172a !important; font-weight: 600 !important; }
+        [data-testid="stFileUploadDropzone"] p { color: #ffffff !important; font-weight: 500 !important; }
+        
+        /* 파일 업로더 내 'Upload' 버튼 파란색 그라데이션 적용 */
+        [data-testid="stFileUploadDropzone"] button { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; font-weight: 800 !important; border-radius: 8px !important; }
 
         .insta-gradient-text { font-family: 'Montserrat', sans-serif !important; background: linear-gradient(to right, #00f2fe, #4facfe) !important; -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important; font-weight: 900 !important; font-size: 2.5rem !important; text-align: center !important; }
         .profile-card { background: rgba(255, 255, 255, 0.1) !important; border-radius: 24px !important; padding: 20px !important; margin-bottom: 20px !important; color: #ffffff !important;}
         .owoonwan-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid #4facfe; border-radius: 15px; padding: 30px; text-align: center; color: white; margin-top: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         
-        /* 🔥 [UI 개선 2] 버튼 Hover 시 색상 변경 대신, 크기 확대(Scale) 및 파란 네온 글로우 효과 적용 */
-        button[kind="primary"] { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: all 0.3s ease !important; }
+        /* 일반 버튼 효과 (스케일업 + 글로우) */
+        button[kind="primary"]:not([data-testid="stFileUploadDropzone"] button) { background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important; color: #111111 !important; border: none !important; border-radius: 12px !important; font-weight: 800 !important; transition: all 0.3s ease !important; }
         button[kind="primary"]:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(0, 242, 254, 0.6) !important; color: #111111 !important; }
         
-        button[kind="secondary"] { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: all 0.3s ease !important; }
+        button[kind="secondary"]:not([data-testid="stFileUploadDropzone"] button) { background-color: rgba(255,255,255,0.05) !important; color: #ffffff !important; border: 1px solid #4facfe !important; border-radius: 12px !important; font-weight: 600 !important; transition: all 0.3s ease !important; }
         button[kind="secondary"]:hover { transform: scale(1.02); box-shadow: 0 0 15px rgba(255, 255, 255, 0.3) !important; background-color: rgba(255, 255, 255, 0.1) !important; border-color: #00f2fe !important; color: #ffffff !important; }
         </style>
         """, unsafe_allow_html=True)
@@ -274,7 +276,6 @@ def inject_custom_css():
         [data-testid="stMain"] p, [data-testid="stMain"] h1, [data-testid="stMain"] h2, [data-testid="stMain"] h3, [data-testid="stMain"] h4, [data-testid="stMain"] span, [data-testid="stMain"] label { color: #1e293b !important; }
         .corp-card { background-color: #ffffff !important; border-radius: 12px; padding: 20px; border-left: 5px solid #2563EB; margin-bottom: 20px; color: #1e293b !important;}
         
-        /* 점주 화면 버튼 Hover 애니메이션 통일 */
         button[kind="primary"] { background-color: #2563EB !important; color: white !important; border-radius: 8px !important; border: none !important; font-weight: 700 !important; transition: all 0.3s ease !important; }
         button[kind="primary"]:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4) !important; color: #ffffff !important; }
         
