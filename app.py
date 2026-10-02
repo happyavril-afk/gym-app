@@ -44,7 +44,8 @@ def get_ai_workout_feedback(user_name, planned_count, completed_count, total_set
                   f"1. 시작은 반드시 '오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요'라는 문장으로 시작할 것."
                   f"2. 위에서 주어진 '오늘 달성 수치'만을 인용하여 철저하게 [관찰값] 기반의 칭찬만 할 것. 거짓으로 과거와 비교하지 말 것."
                   f"3. 절대 칼로리 소모량, 근력 향상, 체형 변화 등 측정되지 않은 값이나 의학적/추측성 멘트는 금지할 것."
-                  f"4. 마지막 문장은 '다음에는 상체(또는 다른 부위) 운동부터 시작해 볼까요?' 처럼 다음 방문을 제안하며 끝낼 것.")
+                  f"4. 마지막 문장은 '다음에는 상체(또는 다른 부위) 운동부터 시작해 볼까요?' 처럼 다음 방문을 제안하며 끝낼 세트."
+                  )
         response = model.generate_content(prompt)
         return f"🗣 AI 트레이너: '{response.text.strip()}'"
     except:
@@ -146,8 +147,11 @@ if 'coin_history' not in st.session_state:
         {"날짜": "2026.09.20", "내용": "가입 축하금", "변동": "+1000", "잔액": 1000}
     ]
 
-# 점주 사이드 문자 발송 에디터 상태 토글
+# 🔥 점주 앱 문자 발송 에디터 상태값 추가
 if 'show_sms_editor' not in st.session_state: st.session_state['show_sms_editor'] = False
+if 'show_churn_editor' not in st.session_state: st.session_state['show_churn_editor'] = False
+if 'show_vip_editor' not in st.session_state: st.session_state['show_vip_editor'] = False
+if 'show_evt_editor' not in st.session_state: st.session_state['show_evt_editor'] = False
 
 ROUTINE_DB = {
     "박수민": {
@@ -212,7 +216,7 @@ def reset_routine(user_name):
 if 'my_routine' not in st.session_state: reset_routine(st.session_state['current_user'])
 
 # ==========================================
-# 3. 🎨 커스텀 CSS (UI 개선 완벽 적용)
+# 3. 🎨 커스텀 CSS
 # ==========================================
 def inject_custom_css():
     st.markdown("""
@@ -735,6 +739,7 @@ def owner_app():
         c5.metric("🌱 초기 정착 필요", "8명", "플랜 수립")
         c6.metric("🎯 정체기 돌파 시급", f"{len(sales_df)}명", "PT 제안 타겟")
 
+    # 🔥 [Epic 1 개선] 발송 전 확인 에디터 추가
     elif menu == "🚨 Epic 1. 이탈 위험 관리":
         st.title("🚨 Epic 1. 이탈 위험 신호 관리")
         if not churn_df.empty:
@@ -764,14 +769,61 @@ def owner_app():
         st.dataframe(churn_df, use_container_width=True, hide_index=True)
         default_churn = [m for m in churn_df['회원명'].tolist() if m in all_members] if not churn_df.empty else []
         selected_churn = st.multiselect("발송 대상 선택", options=all_members, default=default_churn)
-        if st.button("일괄 자동 컨택 발송", type="primary"): st.toast(f"✅ {len(selected_churn)}명 발송 완료.")
+        
+        if st.button("컨택 메시지 작성", type="primary"):
+            if selected_churn:
+                st.session_state['show_churn_editor'] = True
+            else:
+                st.warning("발송 대상을 1명 이상 선택해주세요.")
+            st.rerun()
+            
+        if st.session_state.get('show_churn_editor', False):
+            st.markdown("#### ✉️ 이탈 방지 케어 메시지 작성")
+            default_msg = f"[FITPASS PRO]\n안녕하세요 회원님, 핏패스 프로입니다.\n최근 바쁘신지 센터 방문이 뜸하신 것 같아 연락드렸습니다.\n운동하시면서 불편한 점이 있으시다면 언제든 편하게 말씀해주세요!\n\n이번 주말 방문 시 체성분 재측정과 원포인트 레슨을 무료로 도와드리고자 하니, 편하신 시간에 방문해주세요."
+            edited_msg = st.text_area("발송할 내용을 확인하고 필요시 수정해주세요.", value=default_msg, height=130, key="churn_msg")
+            
+            c_btn1, c_btn2 = st.columns([1, 5])
+            with c_btn1:
+                if st.button("🚀 최종 발송", type="primary", use_container_width=True, key="send_churn"):
+                    st.toast(f"✅ 선택한 {len(selected_churn)}명에게 메시지가 발송되었습니다!")
+                    st.session_state['show_churn_editor'] = False
+                    st.rerun()
+            with c_btn2:
+                if st.button("취소", use_container_width=True, key="cancel_churn"):
+                    st.session_state['show_churn_editor'] = False
+                    st.rerun()
+            st.markdown("---")
 
+    # 🔥 [Epic 2 개선] 발송 전 확인 에디터 추가
     elif menu == "🏆 Epic 2. 우수 회원 관리":
         st.title("🏆 Epic 2. 우수 회원 자동 선별")
         st.dataframe(vip_df, use_container_width=True, hide_index=True)
         default_vip = [m for m in vip_df['회원명'].tolist() if m in all_members] if not vip_df.empty else []
         selected_vip = st.multiselect("발송 대상 선택", options=all_members, default=default_vip)
-        if st.button("VIP 혜택 메시지 발송", type="primary"): st.toast(f"✅ {len(selected_vip)}명 발송 완료.")
+        
+        if st.button("VIP 혜택 메시지 작성", type="primary"):
+            if selected_vip:
+                st.session_state['show_vip_editor'] = True
+            else:
+                st.warning("발송 대상을 1명 이상 선택해주세요.")
+            st.rerun()
+            
+        if st.session_state.get('show_vip_editor', False):
+            st.markdown("#### ✉️ VIP 혜택 안내 메시지 작성")
+            default_msg = f"[FITPASS PRO]\n안녕하세요 회원님!\n회원님의 꾸준한 노력에 감사드리며, 이번 달 VIP 회원으로 선정되셨음을 알려드립니다 🎉\n\nVIP 회원님을 위한 [단백질 쉐이크 무료 교환권 2장]을 앱 내 보관함에 넣어드렸습니다. 오늘도 득근하시는 하루 되세요!"
+            edited_msg = st.text_area("발송할 내용을 확인하고 필요시 수정해주세요.", value=default_msg, height=130, key="vip_msg")
+            
+            c_btn1, c_btn2 = st.columns([1, 5])
+            with c_btn1:
+                if st.button("🚀 최종 발송", type="primary", use_container_width=True, key="send_vip"):
+                    st.toast(f"✅ 선택한 {len(selected_vip)}명에게 VIP 메시지가 발송되었습니다!")
+                    st.session_state['show_vip_editor'] = False
+                    st.rerun()
+            with c_btn2:
+                if st.button("취소", use_container_width=True, key="cancel_vip"):
+                    st.session_state['show_vip_editor'] = False
+                    st.rerun()
+            st.markdown("---")
 
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
@@ -852,29 +904,47 @@ def owner_app():
                 if st.button("저장", key=f"f_btn_{i}", type="primary"):
                     f['상태'] = status; f['답변'] = reply; st.rerun()
 
+    # 🔥 [Epic 8 개선] 발송 전 확인 에디터 추가
     elif menu == "🎉 Epic 8. 이벤트 홍보":
         st.title("🎉 Epic 8. 기획 이벤트 홍보")
-        st.markdown("#### 📊 진행 중인 이벤트 퍼널")
+        st.markdown("#### 📊 진행 중인 이벤트 퍼널 (PT 프로모션)")
         funnel_chart = alt.Chart(pd.DataFrame({"단계": ["1. 발송", "2. 신청", "3. 참여"], "인원": [150, 45, 30]})).mark_bar(color='#2563EB').encode(x='인원:Q', y=alt.Y('단계:O', sort=["1. 발송", "2. 신청", "3. 참여"])).properties(height=150)
         st.altair_chart(funnel_chart, use_container_width=True)
+        
+        if st.button("📢 신규 이벤트 단체 문자 작성", type="primary"):
+            st.session_state['show_evt_editor'] = True
+            st.rerun()
+            
+        if st.session_state.get('show_evt_editor', False):
+            st.markdown("#### ✉️ 이벤트 홍보 메시지 작성")
+            default_msg = f"[FITPASS PRO 이벤트]\n안녕하세요 핏패스 프로입니다.\n천고마비의 계절 가을을 맞아, 이번 주말 한정 PT 10회권 20% 할인 이벤트를 진행합니다!\n선착순 10명에게만 제공되는 특별한 기회를 놓치지 마세요 💪"
+            edited_msg = st.text_area("발송할 내용을 확인하고 필요시 수정해주세요.", value=default_msg, height=130, key="evt_msg")
+            
+            c_btn1, c_btn2 = st.columns([1, 5])
+            with c_btn1:
+                if st.button("🚀 전체 발송", type="primary", use_container_width=True, key="send_evt"):
+                    st.toast("✅ 전체 회원에게 이벤트 홍보 문자가 발송되었습니다!")
+                    st.session_state['show_evt_editor'] = False
+                    st.rerun()
+            with c_btn2:
+                if st.button("취소", use_container_width=True, key="cancel_evt"):
+                    st.session_state['show_evt_editor'] = False
+                    st.rerun()
+            st.markdown("---")
 
     elif menu == "🌱 Epic 9. 신규 회원 정착":
         st.title("🌱 Epic 9. 신규 회원 정착 모니터링")
         st.dataframe(pd.DataFrame({"신규 회원명": ["최신규", "이초보"], "가입일": ["D-3", "D-6"]}), hide_index=True)
 
-    # 🔥 [Epic 10 개선] 상담 문자 발송 시 에디터 노출 UX 적용
     elif menu == "📅 Epic 10. PT 일정 관리":
         st.title("📅 Epic 10. PT 일정 최적화 및 캘린더")
         
-        if 'show_sms_editor' not in st.session_state:
-            st.session_state['show_sms_editor'] = False
-            
         c1, c2 = st.columns([3, 1])
         with c1:
             st.info("💡 **AI 스케줄링 제안:** 오늘 15:00에 유휴시간이 감지되었습니다. 정체기를 겪고 있는 최운식 회원에게 상담을 제안해 보는 것은 어떨까요?")
         with c2:
             if st.button("상담 문자 작성", type="primary", use_container_width=True):
-                st.session_state['show_sms_editor'] = not st.session_state.get('show_sms_editor', False)
+                st.session_state['show_sms_editor'] = True
                 st.rerun()
 
         if st.session_state.get('show_sms_editor', False):
