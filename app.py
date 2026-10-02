@@ -8,10 +8,14 @@ from datetime import datetime
 import google.generativeai as genai
 
 # ==========================================
-# 0. 🤖 Gemini AI 안전 설정
+# 0. 🤖 Gemini AI 자동 설정 (Secrets 연동)
 # ==========================================
+# Streamlit Secrets에서 API 키를 자동으로 안전하게 불러옵니다.
 if 'gemini_api_key' not in st.session_state:
-    st.session_state['gemini_api_key'] = ""
+    try:
+        st.session_state['gemini_api_key'] = st.secrets["GEMINI_API_KEY"]
+    except Exception:
+        st.session_state['gemini_api_key'] = ""
 
 @st.cache_data(ttl=3600) 
 def get_ai_greeting(user_name, routine_theme, api_key):
@@ -47,7 +51,6 @@ def get_ai_workout_feedback(user_name, planned_count, completed_count, total_set
     except:
         return f"🗣 (시스템) '{user_name}님, 오늘 계획한 {planned_count}개 중 {completed_count}개를 마쳤어요!'"
 
-# 🔥 [FRD M24] 월간 피드백 전용 AI 함수 추가
 @st.cache_data(ttl=3600)
 def get_ai_monthly_feedback(user_name, total_days, prev_days, freq_part, api_key):
     if not api_key or len(api_key) < 10: 
@@ -131,12 +134,15 @@ if 'workout_state' not in st.session_state: st.session_state['workout_state'] = 
 if 'ai_mode' not in st.session_state: st.session_state['ai_mode'] = True 
 if 'today_records' not in st.session_state: st.session_state['today_records'] = []
 
-# 🔥 새로운 요구사항 세션 변수 추가
-if 'fav_machines' not in st.session_state: st.session_state['fav_machines'] = ["파워 랙 (스쿼트)"] # M25
-if 'next_workout_promise' not in st.session_state: st.session_state['next_workout_promise'] = None # M27
-if 'coins' not in st.session_state: st.session_state['coins'] = 1200 # M19A
+if 'fav_machines' not in st.session_state: st.session_state['fav_machines'] = ["파워 랙 (스쿼트)"] 
+if 'next_workout_promise' not in st.session_state: st.session_state['next_workout_promise'] = None 
+if 'coins' not in st.session_state: st.session_state['coins'] = 1200 
 if 'coin_history' not in st.session_state:
-    st.session_state['coin_history'] = [{"날짜": "2026.09.28", "내용": "주간 목표 달성", "변동": "+500", "잔액": 1200}]
+    st.session_state['coin_history'] = [
+        {"날짜": "2026.09.28", "내용": "주간 목표 달성", "변동": "+500", "잔액": 1200},
+        {"날짜": "2026.09.25", "내용": "단백질 쉐이크 교환", "변동": "-300", "잔액": 700},
+        {"날짜": "2026.09.20", "내용": "가입 축하금", "변동": "+1000", "잔액": 1000}
+    ]
 
 ROUTINE_DB = {
     "박수민": {
@@ -172,48 +178,28 @@ MACHINE_INSTRUCTIONS = {
     "파워 랙 (스쿼트)": {
         "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
         "target": "주요 부위: 대퇴사두근, 둔근 (하체 전체)",
-        "steps": [
-            "1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.",
-            "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.",
-            "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.",
-            "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨을 거치합니다."
-        ]
+        "steps": ["1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.", "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.", "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.", "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨을 거치합니다."]
     },
     "벤치프레스 머신": {
         "img": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
         "target": "주요 부위: 대흉근, 삼두근 (가슴/팔)",
-        "steps": [
-            "1️⃣ [조절] 등받이와 안장 높이를 조절하여 그립이 가슴 중앙에 오도록 합니다.",
-            "2️⃣ [시작] 엉덩이와 등을 패드에 밀착하고 양손으로 손잡이를 단단히 잡습니다.",
-            "3️⃣ [움직임] 가슴 근육의 수축을 느끼며 앞으로 밀어낸 후 천천히 저항하며 돌아옵니다.",
-            "4️⃣ [종료] 무게추가 완전히 닿기 전에 멈추고 안전하게 손잡이를 놓습니다."
-        ]
+        "steps": ["1️⃣ [조절] 등받이와 안장 높이를 조절하여 그립이 가슴 중앙에 오도록 합니다.", "2️⃣ [시작] 엉덩이와 등을 패드에 밀착하고 손잡이를 단단히 잡습니다.", "3️⃣ [움직임] 가슴 근육의 수축을 느끼며 밀어낸 후 천천히 저항하며 돌아옵니다.", "4️⃣ [종료] 무게추가 완전히 닿기 전에 멈추고 안전하게 손잡이를 놓습니다."]
     },
     "랫풀다운": {
         "img": "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470",
         "target": "주요 부위: 광배근, 이두근 (등/팔)",
-        "steps": [
-            "1️⃣ [조절] 허벅지가 뜨지 않도록 고정 패드를 본인 체형에 맞게 낮춰 조절합니다.",
-            "2️⃣ [시작] 어깨너비보다 넓게 바를 잡고 앉아 허리를 곧게 폅니다.",
-            "3️⃣ [움직임] 가슴을 열고 쇄골 쪽으로 바를 당긴 후, 광배근의 자극을 느끼며 천천히 올립니다.",
-            "4️⃣ [종료] 팔을 완전히 펴기 전 통제하며 동작을 마무리합니다."
-        ]
+        "steps": ["1️⃣ [조절] 허벅지가 뜨지 않도록 고정 패드를 본인 체형에 맞게 낮춰 조절합니다.", "2️⃣ [시작] 어깨너비보다 넓게 바를 잡고 앉아 허리를 곧게 폅니다.", "3️⃣ [움직임] 가슴을 열고 쇄골 쪽으로 바를 당긴 후, 광배근 자극을 느끼며 올립니다.", "4️⃣ [종료] 팔을 완전히 펴기 전 통제하며 동작을 마무리합니다."]
     },
     "트레드밀": {
         "img": "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1470",
         "target": "주요 부위: 전신 유산소 및 심폐지구력",
-        "steps": [
-            "1️⃣ [조절] 안전을 위해 비상 정지 핀을 옷에 고정합니다.",
-            "2️⃣ [시작] 양옆 고정 발판에 선 상태로 디스플레이의 시작 버튼을 누릅니다.",
-            "3️⃣ [움직임] 벨트가 움직이기 시작하면 속도와 경사도를 서서히 올리며 바른 자세로 걷거나 뜁니다.",
-            "4️⃣ [종료] 정지 버튼을 누르고 벨트가 완전히 멈춘 것을 확인한 후 내려옵니다."
-        ]
+        "steps": ["1️⃣ [조절] 안전을 위해 비상 정지 핀을 옷에 고정합니다.", "2️⃣ [시작] 양옆 고정 발판에 선 상태로 디스플레이의 시작 버튼을 누릅니다.", "3️⃣ [움직임] 벨트가 움직이기 시작하면 속도와 경사도를 서서히 올리며 바른 자세로 걷거나 뜁니다.", "4️⃣ [종료] 정지 버튼을 누르고 벨트가 완전히 멈춘 것을 확인한 후 내려옵니다."]
     }
 }
 
 def reset_routine(user_name):
     import copy
-    db_entry = ROUTINE_DB.get(user_name, ROUTINE_DB["default"])
+    db_entry = ROUTINE_DB.get(user_name, ROUTINE_DB.get("박수민"))
     st.session_state['routine_theme'] = db_entry["theme"]
     st.session_state['routine_reason'] = db_entry["reason"]
     st.session_state['my_routine'] = copy.deepcopy(db_entry["routines"])
@@ -230,9 +216,7 @@ def inject_custom_css():
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff') format('woff'); font-weight: 500; }
     @font-face { font-family: 'GmarketSans'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff') format('woff'); font-weight: 700; }
     p, h1, h2, h3, h4, h5, h6, label, li, a, button, svg text, canvas { font-family: 'GmarketSans', 'Montserrat', sans-serif !important; letter-spacing: -0.5px; }
-    [data-testid="stDataFrame"] div, [data-testid="stTable"] th, [data-testid="stTable"] td { font-family: 'GmarketSans', sans-serif !important; }
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 { color: #1e293b !important; }
-    
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] label { color: #1e293b !important; }
     .reward-card { background: rgba(255, 255, 255, 0.05); border: 1px solid #4facfe; border-radius: 12px; padding: 15px; text-align: center; margin-bottom: 10px; }
     .coin-text { font-size: 1.5rem; font-weight: bold; color: #ccff00; }
     .badge-card { text-align:center; padding:15px; background:#1e293b; border-radius:12px; border:2px solid #ccff00; margin-bottom:10px; }
@@ -285,16 +269,6 @@ def inject_custom_css():
 def member_app():
     st.sidebar.markdown("**👟 회원 (B2C) 제어판**")
     
-    with st.sidebar.expander("⚙️ AI 설정 (관리자용)"):
-        input_key = st.text_input("Gemini API Key 입력", value=st.session_state['gemini_api_key'], type="password")
-        st.caption("※ 정상적인 키는 'AQ...' 등으로 시작할 수 있습니다.")
-        if st.button("API 연동 확인"):
-            if input_key:
-                st.session_state['gemini_api_key'] = input_key
-                st.success("✅ 키가 세션에 임시 저장되었습니다.")
-            else:
-                st.warning("키를 입력해주세요.")
-
     all_members = df_members['회원명'].tolist() if not df_members.empty else ["박수민", "최운식"]
     if "박수민" not in all_members: all_members.insert(0, "박수민")
     
@@ -332,7 +306,7 @@ def member_app():
         # 🔥 [FRD M27] 홈 화면 상단에 다음 운동 약속 리마인드 배너 노출
         if st.session_state.get('next_workout_promise'):
             st.info(f"🔔 **AI 리마인드:** {st.session_state['next_workout_promise']}에 운동이 예약되어 있습니다! 오늘도 파이팅!")
-        
+
         if menu == "📊 1. 인바디 및 목표 설정":
             st.markdown("### 📊 M02. 인바디 업로드 및 분석")
             uploaded_file = st.file_uploader("인바디 결과지 (이미지/PDF) 업로드")
@@ -400,7 +374,7 @@ def member_app():
                     st.info("🏃 현재 운동이 진행 중입니다. 기록을 위해 '기구 스캔' 탭을 이용하세요.")
 
         elif menu == "📡 3. 기구 스캔 (기록/타이머)":
-            st.markdown("### 📡 M06. 기구 스캔 및 가이드")
+            st.markdown("### 📡 M06 & M25. 기구 스캔 및 가이드")
             
             # 🔥 [FRD M25 반영] 즐겨찾기 빠른 접근 메뉴
             selected_machine = None
@@ -445,7 +419,7 @@ def member_app():
                     c2.metric("경과 시간", "25:40")
                     c3.metric("소모 칼로리", "210 kcal")
                     if st.button("유산소 종료 및 저장", use_container_width=True): 
-                        st.session_state['today_records'].append({"기구": search_keyword, "내용": "25분 40초 완료"})
+                        st.session_state['today_records'].append({"기구": selected_machine, "내용": "25분 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
                     st.markdown("---")
@@ -474,11 +448,9 @@ def member_app():
                     
                     if st.button("💪 현재 세트 기록 완료 및 휴식", type="primary", use_container_width=True): 
                         for r in st.session_state['my_routine']:
-                            if search_keyword in r.get('기구', ''):
-                                r['완료'] = True
-                        
-                        st.session_state['today_records'].append({"기구": search_keyword, "중량": weight, "횟수": reps})
-                        st.toast(f"✅ {search_keyword} 1세트 추가됨!")
+                            if search_keyword in r.get('기구', ''): r['완료'] = True
+                        st.session_state['today_records'].append({"기구": selected_machine, "중량": weight, "횟수": reps})
+                        st.toast(f"✅ {selected_machine} 세트 저장됨!")
                         
                         bar = st.progress(0, text="⏱️ 60초 휴식 타이머 진행 중...")
                         for p in range(100):
@@ -488,11 +460,7 @@ def member_app():
                         st.rerun()
 
         elif menu == "📈 4. 리포트 및 오운완(종료)":
-            if st.session_state['workout_state'] == "준비":
-                st.info("아직 운동을 시작하지 않았습니다. '2. 오늘의 처방' 탭에서 운동을 시작해주세요.")
-                st.markdown("---")
-            
-            elif st.session_state['workout_state'] == "진행중":
+            if st.session_state['workout_state'] == "진행중":
                 st.markdown("### 🏁 M12. 오늘 운동 종료하기")
                 st.warning("🏃 아직 운동 세션이 진행 중입니다. 최종 종료하시겠습니까?")
                 
@@ -514,25 +482,16 @@ def member_app():
                 with col2:
                     if st.button("🚨 최종 종료하고 리포트 보기", type="primary", use_container_width=True):
                         st.session_state['workout_state'] = "완료"
-                        # 🔥 [FRD M19A] 오운완 달성 시 코인 지급
                         st.session_state['coins'] += 100
-                        st.session_state['coin_history'].insert(0, {
-                            "날짜": datetime.now().strftime("%Y.%m.%d"),
-                            "내용": "오운완 출석 보상",
-                            "변동": "+100",
-                            "잔액": st.session_state['coins']
-                        })
+                        st.session_state['coin_history'].insert(0, {"날짜": datetime.now().strftime("%Y.%m.%d"), "내용": "오운완 출석 보상", "변동": "+100", "잔액": st.session_state['coins']})
                         st.rerun()
                 st.markdown("---")
 
             elif st.session_state['workout_state'] == "완료":
-                st.markdown("### 📸 M13 & M18. 오늘 운동 결과 요약 및 오운완")
-                
+                st.markdown("### 📸 M13. 오늘 운동 결과 요약")
                 planned_items = st.session_state['my_routine']
                 planned_count = len(planned_items)
-                completed_items = [r for r in planned_items if r.get('완료', False)]
-                completed_count = len(completed_items)
-                
+                completed_count = sum(1 for r in planned_items if r.get('완료', False))
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
@@ -548,18 +507,7 @@ def member_app():
                     if st.button("🔔 리마인드 알림 설정", use_container_width=True):
                         st.session_state['next_workout_promise'] = f"{next_date.strftime('%m월 %d일')} {next_time.strftime('%H:%M')}"
                         st.toast(f"✅ {st.session_state['next_workout_promise']}에 알림을 보내드릴게요!")
-                
-                st.markdown("#### 📋 오늘의 루틴 수행 결과")
-                for r in planned_items:
-                    if r.get('완료', False):
-                        st.write(f"✅ **{r.get('기구')}** - 완료")
-                    elif r.get('상태') == '건너뜀':
-                        st.write(f"⏭️ **{r.get('기구')}** - 건너뜀 (사유: 사용자 선택)")
-                    else:
-                        st.write(f"⬜ **{r.get('기구')}** - 미완료")
-                
-                st.markdown("<br>", unsafe_allow_html=True)
-                
+
                 card_html = f"""
                 <div class='owoonwan-card'>
                     <h2>FITPASS PRO</h2>
@@ -568,15 +516,10 @@ def member_app():
                     <hr style="border-top: 1px solid rgba(255,255,255,0.2); margin: 20px 0;">
                     <p style="font-size: 1.1rem;">📅 {datetime.now().strftime('%Y.%m.%d')}</p>
                     <p style="font-size: 1.1rem;">🏋️ 총 볼륨: {total_vol} kg</p>
-                    <p style="font-size: 1.1rem;">🔥 달성률: {planned_count}개 중 {completed_count}개 완료</p>
                     <p style="font-size: 1.2rem; color: #ccff00; margin-top: 10px;">🎁 +100 코인 획득!</p>
-                </div>
-                <br>
+                </div><br>
                 """
                 st.markdown(card_html, unsafe_allow_html=True)
-                if st.button("📸 인스타그램 스토리에 공유하기", use_container_width=True, type="primary"):
-                    st.toast("✅ 이미지가 클립보드에 복사되었습니다!")
-                st.markdown("---")
 
             # 🔥 [FRD M24 반영] 월간/주간 리포트 탭 분리
             tab1, tab2 = st.tabs(["📊 주간 및 월간 리포트", "📈 누적 추이"])
@@ -616,19 +559,9 @@ def member_app():
             
             with tab_rank:
                 st.markdown("### 👑 이번 주 명예의 전당")
-                st.caption("※ 주간 방문 횟수 및 총 볼륨을 기준으로 산정됩니다.")
-                
-                rank_data = pd.DataFrame({
-                    "순위": ["1위 🥇", "2위 🥈", "3위 🥉", "4위", "5위"],
-                    "회원": ["이광수", "송지효", f"{current_user_name}(나)", "최운식", "김철수"],
-                    "주간 방문(일)": [5, 4, 3, 2, 1],
-                    "주간 누적 볼륨(kg)": [12500, 9800, 8500, 5400, 3200]
-                })
+                rank_data = pd.DataFrame({"순위": ["1위 🥇", "2위 🥈", "3위 🥉", "4위", "5위"], "회원": ["이광수", "송지효", f"{current_user_name}(나)", "최운식", "김철수"], "주간 방문": [5, 4, 3, 2, 1]})
                 st.dataframe(rank_data, hide_index=True, use_container_width=True)
-                
-                st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 2위(송지효)까지 방문 1회 남았습니다! 조금만 더 힘내세요!")
-                if st.button("🔥 1위에게 자극받기 (응원 보내기)"):
-                    st.toast("이광수님에게 응원의 메시지를 보냈습니다!")
+                st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 조금만 더 힘내세요!")
 
             with tab_reward:
                 st.markdown("### 🎁 포인트 교환소")
@@ -642,16 +575,13 @@ def member_app():
                         st.success(f"🎉 '{item_name}' 교환 성공!")
                     else: st.error("❌ 코인이 부족합니다.")
 
-                r_col1, r_col2, r_col3 = st.columns(3)
+                r_col1, r_col2 = st.columns(2)
                 with r_col1:
-                    st.markdown("<div class='reward-card'>🥤<br><b>단백질 쉐이크</b><br>500 C</div>", unsafe_allow_html=True)
-                    if st.button("교환", key="buy_shake", use_container_width=True): buy_item("단백질 쉐이크", 500)
+                    st.markdown("<div class='reward-card'>🥤 <b>단백질 쉐이크</b><br>500 C</div>", unsafe_allow_html=True)
+                    if st.button("교환하기", key="btn1", use_container_width=True): buy_item("단백질 쉐이크", 500)
                 with r_col2:
-                    st.markdown("<div class='reward-card'>☕<br><b>아메리카노 1잔</b><br>300 C</div>", unsafe_allow_html=True)
-                    if st.button("교환", key="buy_coffee", use_container_width=True): buy_item("아메리카노 1잔", 300)
-                with r_col3:
-                    st.markdown("<div class='reward-card'>💪<br><b>1:1 PT 1회권</b><br>5,000 C</div>", unsafe_allow_html=True)
-                    if st.button("교환", key="buy_pt", use_container_width=True): buy_item("1:1 PT 1회권", 5000)
+                    st.markdown("<div class='reward-card'>☕ <b>아메리카노 1잔</b><br>300 C</div>", unsafe_allow_html=True)
+                    if st.button("교환하기", key="btn2", use_container_width=True): buy_item("아메리카노 1잔", 300)
 
                 st.markdown("#### 📜 획득/사용 내역")
                 st.dataframe(pd.DataFrame(st.session_state['coin_history']), hide_index=True, use_container_width=True)
@@ -727,7 +657,7 @@ def owner_app():
         c1, c2, c3 = st.columns(3)
         c1.metric("🚨 신규 이탈 위험군", f"{len(churn_df)}명", "조치 필요")
         c2.metric("💬 미답변 1:1 질문", f"{pending_qna}건", "대기중")
-        c3.metric("🛠️ 신규 시설 민원", f"{pending_fac}건", "확인 요망")
+        c3.metric("🛠 신규 시설 민원", f"{pending_fac}건", "확인 요망")
         c4, c5, c6 = st.columns(3)
         c4.metric("🏆 신규 우수 회원", f"{len(vip_df)}명", "+2명")
         c5.metric("🌱 초기 정착 필요", "8명", "플랜 수립")
