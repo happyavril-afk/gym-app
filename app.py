@@ -146,6 +146,9 @@ if 'coin_history' not in st.session_state:
         {"날짜": "2026.09.20", "내용": "가입 축하금", "변동": "+1000", "잔액": 1000}
     ]
 
+# 점주 사이드 문자 발송 에디터 상태 토글
+if 'show_sms_editor' not in st.session_state: st.session_state['show_sms_editor'] = False
+
 ROUTINE_DB = {
     "박수민": {
         "theme": "🔥 하체 볼륨업 (근력 증가)",
@@ -352,7 +355,7 @@ def member_app():
             st.markdown("### 🤖 M03. AI 트레이너 추천 루틴")
             
             if not st.session_state.get('ai_mode', True):
-                st.warning("⚠️️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
+                st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
                 db_entry = ROUTINE_DB.get(current_user_name, ROUTINE_DB["default"])
                 theme = db_entry["theme"]
@@ -859,16 +862,37 @@ def owner_app():
         st.title("🌱 Epic 9. 신규 회원 정착 모니터링")
         st.dataframe(pd.DataFrame({"신규 회원명": ["최신규", "이초보"], "가입일": ["D-3", "D-6"]}), hide_index=True)
 
-    # 🔥 [Epic 10 개편] 탭 메뉴를 통한 주간/월간 캘린더 지원
+    # 🔥 [Epic 10 개선] 상담 문자 발송 시 에디터 노출 UX 적용
     elif menu == "📅 Epic 10. PT 일정 관리":
         st.title("📅 Epic 10. PT 일정 최적화 및 캘린더")
         
+        if 'show_sms_editor' not in st.session_state:
+            st.session_state['show_sms_editor'] = False
+            
         c1, c2 = st.columns([3, 1])
         with c1:
             st.info("💡 **AI 스케줄링 제안:** 오늘 15:00에 유휴시간이 감지되었습니다. 정체기를 겪고 있는 최운식 회원에게 상담을 제안해 보는 것은 어떨까요?")
         with c2:
-            if st.button("자동 상담 문자 발송", type="primary", use_container_width=True):
-                st.toast("최운식 회원에게 15:00 상담 제안 문자가 발송되었습니다!")
+            if st.button("상담 문자 작성", type="primary", use_container_width=True):
+                st.session_state['show_sms_editor'] = not st.session_state.get('show_sms_editor', False)
+                st.rerun()
+
+        if st.session_state.get('show_sms_editor', False):
+            st.markdown("#### ✉️ 상담 제안 문자 작성")
+            default_msg = "[FITPASS PRO]\n안녕하세요 최운식 회원님, AI 트레이너입니다.\n최근 운동 데이터를 분석해보니 벤치프레스 중량이 정체되어 있어 새로운 자극이 필요한 시점입니다.\n오늘 15:00에 담당 트레이너의 시간이 비어있는데, 짧은 원포인트 레슨 및 피드백 상담 어떠신가요?"
+            edited_msg = st.text_area("발송할 내용을 확인하고 필요시 수정해주세요.", value=default_msg, height=130)
+            
+            c_btn1, c_btn2 = st.columns([1, 5])
+            with c_btn1:
+                if st.button("🚀 최종 발송", type="primary", use_container_width=True):
+                    st.toast("✅ 최운식 회원에게 상담 제안 문자가 발송되었습니다!")
+                    st.session_state['show_sms_editor'] = False
+                    st.rerun()
+            with c_btn2:
+                if st.button("취소", use_container_width=True):
+                    st.session_state['show_sms_editor'] = False
+                    st.rerun()
+            st.markdown("---")
         
         tab_week, tab_month = st.tabs(["📅 주간 시간표", "🗓️ 월간 캘린더"])
         
