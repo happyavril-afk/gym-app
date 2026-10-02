@@ -8,7 +8,7 @@ from datetime import datetime
 import google.generativeai as genai
 
 # ==========================================
-# 0. 🤖 Gemini AI 설정 및 프롬프트 고도화
+# 0. 🤖 Gemini AI 안전 설정
 # ==========================================
 if 'gemini_api_key' not in st.session_state:
     st.session_state['gemini_api_key'] = ""
@@ -27,7 +27,6 @@ def get_ai_greeting(user_name, routine_theme, api_key):
     except Exception as e:
         return f"🗣 (AI 연결 중...) '{user_name}님, 오늘도 파이팅입니다! 준비된 루틴을 시작해볼까요?'"
 
-# 🔥 [FRD M13 반영] 프롬프트 제약조건 및 수치 기반 피드백 강화
 @st.cache_data(ttl=3600)
 def get_ai_workout_feedback(user_name, planned_count, completed_count, total_sets, total_vol, api_key):
     if not api_key or len(api_key) < 10: 
@@ -148,6 +147,50 @@ ROUTINE_DB = {
             {"id": 0, "부위": "워밍업", "기구": "트레드밀", "목표": "속도 5.5", "시간": "10분", "완료": False, "상태": "대기"},
             {"id": 1, "부위": "가슴", "기구": "체스트 프레스", "목표": "20kg x 15회 (3세트)", "시간": "10분", "완료": False, "상태": "대기"},
             {"id": 2, "부위": "등", "기구": "랫풀다운", "목표": "20kg x 15회 (3세트)", "시간": "10분", "완료": False, "상태": "대기"}
+        ]
+    }
+}
+
+# 🔥 [FRD M07] 기구별 사용법 안내 이미지 및 4단계 스텝 데이터
+MACHINE_INSTRUCTIONS = {
+    "파워 랙 (스쿼트)": {
+        "img": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470",
+        "target": "주요 부위: 대퇴사두근, 둔근 (하체 전체)",
+        "steps": [
+            "1️⃣ [조절] 바벨 높이를 본인의 어깨선에 맞게 세팅합니다.",
+            "2️⃣ [시작] 바벨을 승모근에 단단히 얹고 가슴을 폅니다.",
+            "3️⃣ [움직임] 엉덩이를 뒤로 빼며 무릎이 발끝 방향을 향하도록 앉았다 일어납니다.",
+            "4️⃣ [종료] 완전히 일어선 후 안전바 위치를 확인하며 바벨을 거치합니다."
+        ]
+    },
+    "벤치프레스 머신": {
+        "img": "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=1470",
+        "target": "주요 부위: 대흉근, 삼두근 (가슴/팔)",
+        "steps": [
+            "1️⃣ [조절] 등받이와 안장 높이를 조절하여 그립이 가슴 중앙에 오도록 합니다.",
+            "2️⃣ [시작] 엉덩이와 등을 패드에 밀착하고 양손으로 손잡이를 단단히 잡습니다.",
+            "3️⃣ [움직임] 가슴 근육의 수축을 느끼며 앞으로 밀어낸 후 천천히 저항하며 돌아옵니다.",
+            "4️⃣ [종료] 무게추가 완전히 닿기 전에 멈추고 안전하게 손잡이를 놓습니다."
+        ]
+    },
+    "랫풀다운": {
+        "img": "https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?q=80&w=1470",
+        "target": "주요 부위: 광배근, 이두근 (등/팔)",
+        "steps": [
+            "1️⃣ [조절] 허벅지가 뜨지 않도록 고정 패드를 본인 체형에 맞게 낮춰 조절합니다.",
+            "2️⃣ [시작] 어깨너비보다 넓게 바를 잡고 앉아 허리를 곧게 폅니다.",
+            "3️⃣ [움직임] 가슴을 열고 쇄골 쪽으로 바를 당긴 후, 광배근의 자극을 느끼며 천천히 올립니다.",
+            "4️⃣ [종료] 팔을 완전히 펴기 전 통제하며 동작을 마무리합니다."
+        ]
+    },
+    "트레드밀 (유산소)": {
+        "img": "https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1470",
+        "target": "주요 부위: 전신 유산소 및 심폐지구력",
+        "steps": [
+            "1️⃣ [조절] 안전을 위해 비상 정지 핀을 옷에 고정합니다.",
+            "2️⃣ [시작] 양옆 고정 발판에 선 상태로 디스플레이의 시작 버튼을 누릅니다.",
+            "3️⃣ [움직임] 벨트가 움직이기 시작하면 속도와 경사도를 서서히 올리며 바른 자세로 걷거나 뜁니다.",
+            "4️⃣ [종료] 정지 버튼을 누르고 벨트가 완전히 멈춘 것을 확인한 후 내려옵니다."
         ]
     }
 }
@@ -276,7 +319,7 @@ def member_app():
             st.selectbox("🎯 최우선 운동 목표", ["근력 증가 (벌크업)", "체중 관리 (다이어트)", "운동 습관 만들기"])
             st.number_input("주당 희망 방문 횟수", min_value=1, max_value=7, value=4)
             avoid = st.multiselect("피하고 싶은 부위 (부상 등)", ["어깨", "허리", "무릎", "손목"])
-            if avoid: st.warning(f"⚠️️ '{', '.join(avoid)}' 부위에 무리가 가는 기구는 추천에서 제외하고 대체 운동을 제안합니다.")
+            if avoid: st.warning(f"⚠️ '{', '.join(avoid)}' 부위에 무리가 가는 기구는 추천에서 제외하고 대체 운동을 제안합니다.")
             
             if st.button("목표 저장", use_container_width=True): st.toast("목표 저장 완료!")
 
@@ -286,8 +329,9 @@ def member_app():
             if not st.session_state.get('ai_mode', True):
                 st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
-                theme = st.session_state.get('routine_theme', '')
-                reason = st.session_state.get('routine_reason', '')
+                db_entry = ROUTINE_DB.get(current_user_name, ROUTINE_DB["default"])
+                theme = db_entry["theme"]
+                reason = db_entry["reason"]
                 
                 ai_msg = get_ai_greeting(current_user_name, theme, st.session_state['gemini_api_key'])
                 st.success(ai_msg)
@@ -331,15 +375,24 @@ def member_app():
                     st.info("🏃 현재 운동이 진행 중입니다. 기록을 위해 '기구 스캔' 탭을 이용하세요.")
 
         elif menu == "📡 3. 기구 스캔 (기록/타이머)":
-            st.markdown("### 📡 M06. NFC 기구 스캔")
+            st.markdown("### 📡 M06 & M07. 기구 스캔 및 사용법 안내")
             machine_options = ["📱 기구 대기 중...", "🏋️ 파워 랙 (스쿼트)", "💺 벤치프레스 머신", "💪 랫풀다운", "🏃 트레드밀 (유산소)"]
             machine = st.selectbox("가상 NFC 태그 시뮬레이터:", machine_options)
             
             if machine != "📱 기구 대기 중...":
                 machine_name = machine.split(" ")[1] 
                 
+                # 🔥 [FRD M07 반영] 기구별 고화질 이미지 및 4단계 사용법 안내 UI
+                m_info = MACHINE_INSTRUCTIONS.get(machine_name)
+                if m_info:
+                    with st.expander(f"📖 [{machine_name}] 사용 가이드 보기", expanded=True):
+                        st.image(m_info["img"], use_container_width=True)
+                        st.markdown(f"**🎯 {m_info['target']}**")
+                        for step in m_info["steps"]:
+                            st.write(step)
+                        st.warning("⚠️ **주의:** 통증이나 이상을 느끼면 즉시 운동을 중지하세요.")
+                
                 if "유산소" in machine:
-                    st.image("https://images.unsplash.com/photo-1538805060514-97d9cc17730c?q=80&w=1470", use_container_width=True)
                     st.write("🏃 웨어러블 디바이스 연동 시연 중...")
                     c1, c2, c3 = st.columns(3)
                     c1.metric("현재 심박수", "135 bpm")
@@ -349,15 +402,15 @@ def member_app():
                         st.session_state['today_records'].append({"기구": "트레드밀", "내용": "25분 40초 완료"})
                         st.toast("✅ 유산소 데이터가 저장되었습니다!")
                 else:
-                    st.info(f"💡 **[{machine_name}] 사용법**\n1. 본인 체형에 맞게 패드를 조절합니다.\n2. 반동 없이 동작을 수행합니다.\n※ 통증 발생 시 즉각 중단하세요.")
-                    
+                    st.markdown("---")
+                    st.markdown("#### 📝 운동 기록 입력")
                     last_w, last_r = 20, 10 
                     if '회원명' in history_df.columns and not history_df[history_df['회원명'] == current_user_name].empty:
                         past = history_df[(history_df['회원명'] == current_user_name) & (history_df['주요 기구'].str.contains(machine_name, na=False))]
                         if not past.empty:
                             last_record = past.sort_values(by="날짜", ascending=False).iloc[0]
                             last_w, last_r = int(last_record.get('중량(kg)', 20)), int(last_record.get('횟수', 10))
-                            st.success(f"💡 **지난번 기록:** {last_w}kg x {last_r}회 ({last_record.get('날짜', '')})")
+                            st.success(f"💡 **지난번 기록 적용:** {last_w}kg x {last_r}회 ({last_record.get('날짜', '')})")
                     
                     c1, c2 = st.columns(2)
                     with c1: weight = st.number_input("중량 (kg)", value=last_w, step=5)
@@ -374,7 +427,6 @@ def member_app():
                         st.caption("아직 기록된 세트가 없습니다.")
                     
                     if st.button("💪 현재 세트 기록 완료 및 휴식", type="primary", use_container_width=True): 
-                        # 세트 저장 시 루틴 체크리스트 자동 갱신 (간이 로직)
                         for r in st.session_state['my_routine']:
                             if machine_name in r.get('기구', ''):
                                 r['완료'] = True
@@ -385,7 +437,7 @@ def member_app():
                         bar = st.progress(0, text="⏱️ 60초 휴식 타이머 진행 중...")
                         for p in range(100):
                             time.sleep(0.01) 
-                            bar.progress(p + 1, text="⏱️ 60초 휴식 타이머 진행 중...")
+                            bar.progress(p + 1, text="⏱️️ 60초 휴식 타이머 진행 중...")
                         st.info("🔔 휴식 종료! 다음 세트를 준비하세요.")
                         st.rerun()
 
@@ -393,7 +445,6 @@ def member_app():
             if st.session_state['workout_state'] == "완료":
                 st.markdown("### 📸 M13 & M18. 오늘 운동 결과 요약 및 오운완")
                 
-                # 🔥 [FRD M13 반영] 계획, 완료, 건너뜀 항목 명시적 계산
                 planned_items = st.session_state['my_routine']
                 planned_count = len(planned_items)
                 completed_items = [r for r in planned_items if r.get('완료', False)]
@@ -402,11 +453,9 @@ def member_app():
                 total_sets = len(st.session_state['today_records'])
                 total_vol = sum([r.get('중량',0)*r.get('횟수',0) for r in st.session_state['today_records']])
                 
-                # 고도화된 AI 멘트 호출 (수치 및 제약조건 포함)
                 ai_fb = get_ai_workout_feedback(current_user_name, planned_count, completed_count, total_sets, total_vol, st.session_state['gemini_api_key'])
                 st.success(ai_fb)
                 
-                # 🔥 [FRD M13 반영] 처음에 제안한 루틴 중 무엇을 완료/건너뛰었는지 노출
                 st.markdown("#### 📋 오늘의 루틴 수행 결과")
                 for r in planned_items:
                     if r.get('완료', False):
