@@ -494,7 +494,7 @@ def member_app():
                     if r.get('완료', False):
                         st.write(f"✅ **{r.get('기구')}** - 완료")
                     elif r.get('상태') == '건너뜀':
-                        st.write(f"⏭️️ **{r.get('기구')}** - 건너뜀")
+                        st.write(f"⏭️ **{r.get('기구')}** - 건너뜀")
                     else:
                         st.write(f"⬜ **{r.get('기구')}** - 미완료")
                 
@@ -602,14 +602,20 @@ def member_app():
                 st.markdown("### 👑 이번 주 명예의 전당")
                 st.caption("※ 주간 방문 횟수 및 총 볼륨을 기준으로 산정됩니다.")
                 
-                rank_data = pd.DataFrame({
-                    "순위": ["1위 🥇", "2위 🥈", "3위 🥉", "4위", "5위"],
+                rank_df = pd.DataFrame({
                     "회원": ["이광수", "송지효", f"{current_user_name}(나)", "최운식", "김철수"],
-                    "주간 방문(일)": [5, 4, 3, 2, 1],
                     "주간 누적 볼륨(kg)": [12500, 9800, 8500, 5400, 3200]
                 })
-                st.dataframe(rank_data, hide_index=True, use_container_width=True)
-                
+                bars = alt.Chart(rank_df).mark_bar(cornerRadiusEnd=4).encode(
+                    x=alt.X('주간 누적 볼륨(kg):Q', title='주간 누적 볼륨 (kg)'),
+                    y=alt.Y('회원:N', sort='-x', title=''),
+                    color=alt.condition(alt.datum.회원 == f"{current_user_name}(나)", alt.value('#ccff00'), alt.value('#4facfe')),
+                    tooltip=['회원', '주간 누적 볼륨(kg)']
+                )
+                text = bars.mark_text(align='left', baseline='middle', dx=5, fontSize=12, fontWeight='bold', color='white').encode(
+                    text=alt.Text('주간 누적 볼륨(kg):Q', format=',')
+                )
+                st.altair_chart((bars + text).properties(height=250), use_container_width=True)
                 st.info(f"💡 **{current_user_name}**님은 현재 **3위**입니다. 조금만 더 힘내세요!")
 
             with tab_reward:
@@ -764,7 +770,6 @@ def owner_app():
         selected_vip = st.multiselect("발송 대상 선택", options=all_members, default=default_vip)
         if st.button("VIP 혜택 메시지 발송", type="primary"): st.toast(f"✅ {len(selected_vip)}명 발송 완료.")
 
-    # 🔥 [Epic 3 보완] 스마트 필터링 및 다중 선택 차트 적용
     elif menu == "🎯 Epic 3. PT 영업 및 성장":
         st.title("🎯 Epic 3. 정체기 회원 타겟팅 (PT 영업)")
         st.dataframe(sales_df, hide_index=True, use_container_width=True)
@@ -774,7 +779,6 @@ def owner_app():
             if '회원명' in history_df.columns:
                 member_hist = history_df[history_df['회원명'] == target_member].copy()
                 if not member_hist.empty:
-                    # 정체종목 자동 선택 로직
                     plateau_machine = None
                     if not sales_df[sales_df['회원명'] == target_member].empty and '정체종목' in sales_df.columns:
                         plateau_machine = sales_df[sales_df['회원명'] == target_member]['정체종목'].iloc[0]
@@ -855,9 +859,42 @@ def owner_app():
         st.title("🌱 Epic 9. 신규 회원 정착 모니터링")
         st.dataframe(pd.DataFrame({"신규 회원명": ["최신규", "이초보"], "가입일": ["D-3", "D-6"]}), hide_index=True)
 
+    # 🔥 [Epic 10 개편] 텍스트 알림을 시각적 캘린더 타임테이블 뷰로 전면 교체
     elif menu == "📅 Epic 10. PT 일정 관리":
-        st.title("📅 Epic 10. PT 일정 최적화")
-        st.info("🕒 오늘 15:00 유휴시간 감지됨 (상담 권장)")
+        st.title("📅 Epic 10. PT 일정 최적화 및 캘린더")
+        
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            st.info("💡 **AI 스케줄링 제안:** 오늘 15:00에 유휴시간이 감지되었습니다. 정체기를 겪고 있는 최운식 회원에게 상담을 제안해 보는 것은 어떨까요?")
+        with c2:
+            if st.button("자동 상담 문자 발송", type="primary", use_container_width=True):
+                st.toast("최운식 회원에게 15:00 상담 제안 문자가 발송되었습니다!")
+        
+        st.markdown("#### 📆 이번 주 트레이너 일정표")
+        
+        schedule_data = {
+            "시간": ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "18:00", "19:00", "20:00"],
+            "월": ["PT (이광수)", "상담 (신규)", "개인운동", "식사/휴식", "PT (송지효)", "[유휴시간]", "PT (박지민)", "PT (김민지)", "PT (최운식)", "-"],
+            "화": ["-", "PT (김철수)", "PT (전소민)", "식사/휴식", "-", "[유휴시간]", "상담 (재등록)", "-", "PT (이동국)", "PT (안은진)"],
+            "수": ["PT (이광수)", "-", "개인운동", "식사/휴식", "PT (송지효)", "PT (박보영)", "-", "PT (김민지)", "PT (안은진)", "PT (이준기)"],
+            "목": ["-", "PT (김철수)", "PT (전소민)", "식사/휴식", "-", "[유휴시간]", "상담 (재등록)", "PT (이동국)", "PT (최운식)", "-"],
+            "금": ["PT (이광수)", "상담 (신규)", "개인운동", "식사/휴식", "PT (송지효)", "[유휴시간]", "PT (박지민)", "-", "PT (이동국)", "마감"]
+        }
+        df_schedule = pd.DataFrame(schedule_data).set_index("시간")
+        
+        def color_schedule(val):
+            val_str = str(val)
+            if "PT" in val_str:
+                return 'background-color: #e0e7ff; color: #4338ca; font-weight: 700;'
+            elif "유휴시간" in val_str:
+                return 'background-color: #fee2e2; color: #b91c1c; font-weight: 700;'
+            elif "상담" in val_str:
+                return 'background-color: #fef3c7; color: #b45309; font-weight: 700;'
+            elif "식사" in val_str:
+                return 'background-color: #f8fafc; color: #94a3b8;'
+            return 'color: #cbd5e1;'
+            
+        st.dataframe(df_schedule.style.map(color_schedule), use_container_width=True, height=400)
 
 # ==========================================
 # 6. 🚀 메인 라우팅 
