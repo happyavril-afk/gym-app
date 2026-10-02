@@ -352,7 +352,7 @@ def member_app():
             st.markdown("### 🤖 M03. AI 트레이너 추천 루틴")
             
             if not st.session_state.get('ai_mode', True):
-                st.warning("⚠️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
+                st.warning("⚠️️ 현재 '기본 모드(AI 개인화 중지)' 상태입니다. 기구 스캔 탭에서 직접 운동을 선택해 진행해주세요.")
             else:
                 db_entry = ROUTINE_DB.get(current_user_name, ROUTINE_DB["default"])
                 theme = db_entry["theme"]
@@ -859,7 +859,7 @@ def owner_app():
         st.title("🌱 Epic 9. 신규 회원 정착 모니터링")
         st.dataframe(pd.DataFrame({"신규 회원명": ["최신규", "이초보"], "가입일": ["D-3", "D-6"]}), hide_index=True)
 
-    # 🔥 [Epic 10 개편] 텍스트 알림을 시각적 캘린더 타임테이블 뷰로 전면 교체
+    # 🔥 [Epic 10 개편] 탭 메뉴를 통한 주간/월간 캘린더 지원
     elif menu == "📅 Epic 10. PT 일정 관리":
         st.title("📅 Epic 10. PT 일정 최적화 및 캘린더")
         
@@ -870,31 +870,61 @@ def owner_app():
             if st.button("자동 상담 문자 발송", type="primary", use_container_width=True):
                 st.toast("최운식 회원에게 15:00 상담 제안 문자가 발송되었습니다!")
         
-        st.markdown("#### 📆 이번 주 트레이너 일정표")
+        tab_week, tab_month = st.tabs(["📅 주간 시간표", "🗓️ 월간 캘린더"])
         
-        schedule_data = {
-            "시간": ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "18:00", "19:00", "20:00"],
-            "월": ["PT (이광수)", "상담 (신규)", "개인운동", "식사/휴식", "PT (송지효)", "[유휴시간]", "PT (박지민)", "PT (김민지)", "PT (최운식)", "-"],
-            "화": ["-", "PT (김철수)", "PT (전소민)", "식사/휴식", "-", "[유휴시간]", "상담 (재등록)", "-", "PT (이동국)", "PT (안은진)"],
-            "수": ["PT (이광수)", "-", "개인운동", "식사/휴식", "PT (송지효)", "PT (박보영)", "-", "PT (김민지)", "PT (안은진)", "PT (이준기)"],
-            "목": ["-", "PT (김철수)", "PT (전소민)", "식사/휴식", "-", "[유휴시간]", "상담 (재등록)", "PT (이동국)", "PT (최운식)", "-"],
-            "금": ["PT (이광수)", "상담 (신규)", "개인운동", "식사/휴식", "PT (송지효)", "[유휴시간]", "PT (박지민)", "-", "PT (이동국)", "마감"]
-        }
-        df_schedule = pd.DataFrame(schedule_data).set_index("시간")
-        
-        def color_schedule(val):
-            val_str = str(val)
-            if "PT" in val_str:
-                return 'background-color: #e0e7ff; color: #4338ca; font-weight: 700;'
-            elif "유휴시간" in val_str:
-                return 'background-color: #fee2e2; color: #b91c1c; font-weight: 700;'
-            elif "상담" in val_str:
-                return 'background-color: #fef3c7; color: #b45309; font-weight: 700;'
-            elif "식사" in val_str:
-                return 'background-color: #f8fafc; color: #94a3b8;'
-            return 'color: #cbd5e1;'
+        with tab_week:
+            st.markdown("#### 📆 이번 주 트레이너 상세 일정표")
+            schedule_data = {
+                "시간": ["09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00", "18:00", "19:00", "20:00"],
+                "월": ["PT (이광수)", "상담 (신규)", "개인운동", "식사/휴식", "PT (송지효)", "[유휴시간]", "PT (박지민)", "PT (김민지)", "PT (최운식)", "-"],
+                "화": ["-", "PT (김철수)", "PT (전소민)", "식사/휴식", "-", "[유휴시간]", "상담 (재등록)", "-", "PT (이동국)", "PT (안은진)"],
+                "수": ["PT (이광수)", "-", "개인운동", "식사/휴식", "PT (송지효)", "PT (박보영)", "-", "PT (김민지)", "PT (안은진)", "PT (이준기)"],
+                "목": ["-", "PT (김철수)", "PT (전소민)", "식사/휴식", "-", "[유휴시간]", "상담 (재등록)", "PT (이동국)", "PT (최운식)", "-"],
+                "금": ["PT (이광수)", "상담 (신규)", "개인운동", "식사/휴식", "PT (송지효)", "[유휴시간]", "PT (박지민)", "-", "PT (이동국)", "마감"]
+            }
+            df_schedule = pd.DataFrame(schedule_data).set_index("시간")
             
-        st.dataframe(df_schedule.style.map(color_schedule), use_container_width=True, height=400)
+            def color_schedule(val):
+                val_str = str(val)
+                if "PT" in val_str:
+                    return 'background-color: #e0e7ff; color: #4338ca; font-weight: 700;'
+                elif "유휴시간" in val_str:
+                    return 'background-color: #fee2e2; color: #b91c1c; font-weight: 700;'
+                elif "상담" in val_str:
+                    return 'background-color: #fef3c7; color: #b45309; font-weight: 700;'
+                elif "식사" in val_str:
+                    return 'background-color: #f8fafc; color: #94a3b8;'
+                return 'color: #cbd5e1;'
+                
+            st.dataframe(df_schedule.style.map(color_schedule), use_container_width=True, height=400)
+            
+        with tab_month:
+            st.markdown("#### 🗓️ 이번 달 (10월) 전체 일정 요약")
+            monthly_data = {
+                "월": ["", "5일\nPT 6건", "12일\nPT 5건", "19일\nPT 3건", "26일\nPT 4건"],
+                "화": ["", "6일\n상담 1건", "13일\nPT 4건", "20일\nPT 6건", "27일\nPT 5건"],
+                "수": ["", "7일\nPT 5건", "14일\nPT 6건", "21일\nPT 5건", "28일\nPT 6건"],
+                "목": ["1일\nPT 4건", "8일\nPT 4건", "15일\nPT 5건", "22일\nPT 4건", "29일\nPT 4건"],
+                "금": ["2일\n[유휴] 15:00", "9일\n상담 1건", "16일\nPT 4건", "23일\nPT 5건", "30일\n[유휴] 16:00"],
+                "토": ["3일\n휴무", "10일\n휴무", "17일\n휴무", "24일\n휴무", "31일\n휴무"],
+                "일": ["4일\n휴무", "11일\n휴무", "18일\n휴무", "25일\n휴무", ""]
+            }
+            df_monthly = pd.DataFrame(monthly_data, index=["1주차", "2주차", "3주차", "4주차", "5주차"])
+            
+            def color_monthly(val):
+                val_str = str(val)
+                base_style = 'white-space: pre-wrap; padding: 10px; '
+                if "유휴" in val_str:
+                    return base_style + 'background-color: #fee2e2; color: #b91c1c; font-weight: 700;'
+                elif "상담" in val_str:
+                    return base_style + 'background-color: #fef3c7; color: #b45309; font-weight: 700;'
+                elif "PT" in val_str:
+                    return base_style + 'background-color: #e0e7ff; color: #4338ca; font-weight: 700;'
+                elif "휴무" in val_str:
+                    return base_style + 'background-color: #f1f5f9; color: #94a3b8;'
+                return base_style + 'color: #cbd5e1;'
+                
+            st.dataframe(df_monthly.style.map(color_monthly), use_container_width=True, height=250)
 
 # ==========================================
 # 6. 🚀 메인 라우팅 
